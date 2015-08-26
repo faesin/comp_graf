@@ -1,6 +1,7 @@
 CC=g++
 CFLAGS= -c -Wall
-EXEC=trab1
+LFLAGS= -lGL -lglut
+EXEC=trabalhocg
 SRCS=tinyxml2.cpp main.cpp
 OBJ=$(SRCS:.cpp=.o)
 
@@ -9,11 +10,11 @@ OBJ=$(SRCS:.cpp=.o)
 all: $(SRCS) $(EXEC)
 
 $(EXEC): $(OBJ)
-	$(CC) $(OBJ) -o $@
+	$(CC) $(LFLAGS) $(OBJ) -o $@
 
 .cpp.o:
 	$(CC) $(CFLAGS) $< -o $@
 
 clean: 
-	rm *.o
-	rm $(EXEC)
+	-rm *.o
+	-rm $(EXEC)
