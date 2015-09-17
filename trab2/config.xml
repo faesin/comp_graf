@@ -1,0 +1,5 @@
+<aplicacao>
+	<arquivosDeEntrada>
+		<arquivoDaArena nome="arena" tipo="svg" caminho="~/repos/comp_graf/trab2/arena.svg"></arquivoDaArena>
+	</arquivosDeEntrada>
+</aplicacao>
