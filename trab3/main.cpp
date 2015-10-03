@@ -4,6 +4,7 @@
 #include <vector>
 #include <cstring>
 #include <map>
+#include <signal.h>
 
 #include <GL/glut.h>
 #include "tinyxml2.h"
@@ -13,10 +14,17 @@
 using namespace std;
 using namespace tinyxml2;
 
+int winID;
+
 vector<Object*> objects;
+Chopper *player;
 int g_windowSizeX = 0, g_windowSizeY = 0;
+double g_bltSpeed = 0.0, g_chpSpeed = 0.0;
+
+short int key_press[256];
 
 int openFile(int argc, char **argv);
+void sigCallback(int signum);
 
 void displayCallback(void)
 {
@@ -24,7 +32,6 @@ void displayCallback(void)
 
 	for(uint i = 0; i < objects.size(); ++i)
 	{
-		glColor3d(objects[i]->getR(), objects[i]->getG(), objects[i]->getB());
 		objects[i]->draw();
 	}
 
@@ -38,30 +45,24 @@ void reshapeCallback(int w, int h)
 
 void mouseCallback(int button, int state, int x, int y)
 {
-	if(button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
+	if(button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN)
 	{
-		for(uint i = 0; i < objects.size(); ++i)
-		{
-			Circle *circle = dynamic_cast<Circle*>(objects[i]);
-			if(circle != NULL)
-			{
-				if(sqrt(pow(circle->getX() - x, 2) + pow(circle->getY() - y, 2)) <= (double)circle->getRad())
-					cout << "id=" << objects[i]->getID() << endl;
-			}
-
-			Rectangle *rect = dynamic_cast<Rectangle*>(objects[i]);
-			if(rect != NULL)
-			{
-				if(strstr(objects[i]->getID(), "Arena") != NULL)
-					continue;
-
-				if((rect->getX() < x && x < rect->getX() + rect->getWidth()) && (rect->getY() < y && y < rect->getY() + rect->getHeight()))
-					cout << "id=" << objects[i]->getID() << endl;
-			}
-		}
+		player->changeState();
 	}
 
 	glutPostRedisplay();
+}
+
+void keyboardCallback(unsigned char key, int x, int y)
+{
+	key_press[(int)key] = 1;
+	// cout << "Key " << key << " is pressed" << endl;
+}
+
+void keyUpCallback(unsigned char key, int x, int y)
+{
+	key_press[(int)key] = 0;
+	// cout << "Key " << key << " is up" << endl;
 }
 
 void mouseMoveCallback(int x, int y)
@@ -69,8 +70,42 @@ void mouseMoveCallback(int x, int y)
 	glutPostRedisplay();
 }
 
+void idleCallback()
+{
+	if(key_press[(int)'a'])
+		player->pivot(-player->getTurnSpeed());
+
+	if(key_press[(int)'d'])
+		player->pivot(player->getTurnSpeed());
+
+	if(key_press[(int)'w'])
+		player->moveFoward();
+
+	if(key_press[(int)'-'])
+		player->decRot();
+
+	if(key_press[(int)'+'])
+		player->incRot();
+
+	glutPostRedisplay();
+}
+
+// void sigCallback(int signum)
+// {
+// 	glutIdleFunc(NULL);
+
+// 	objects.clear();
+// 	glutDestroyWindow(winID);
+// 	exit(signum);
+// }
+
 int main(int argc, char **argv)
 {
+	// signal(SIGINT, sigCallback);
+
+	for(uint i = 0; i < 256; ++i)
+		key_press[i] = 0;
+
 	int err = openFile(argc, argv);
 	
 	if(err != 0)
@@ -78,12 +113,25 @@ int main(int argc, char **argv)
 
 	for(uint i = 0; i < objects.size(); ++i)
 	{
+		int found = 0;
+		if(found == 2)
+			break;
+
 		if(strstr(objects[i]->getID(), "Arena") != NULL)
 		{
 			Rectangle *aux = dynamic_cast<Rectangle*>(objects[i]);
 			g_windowSizeX = aux->getWidth();
 			g_windowSizeY = aux->getHeight();
-			break;
+			found++;
+			continue;
+		}
+
+		Chopper *paux = dynamic_cast<Chopper*>(objects[i]);
+		if(paux)
+		{
+			player = paux;
+			found++;
+			continue;
 		}
 	}
 
@@ -99,7 +147,7 @@ int main(int argc, char **argv)
 	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
 	glutInitWindowSize(g_windowSizeX, g_windowSizeY);
 	glutInitWindowPosition(100, 100);
-	glutCreateWindow("Trabalho 2");
+	winID =  glutCreateWindow("Trabalho 2");
 
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 
@@ -112,6 +160,10 @@ int main(int argc, char **argv)
 	glutReshapeFunc(reshapeCallback);
 	glutMouseFunc(mouseCallback);
 	glutMotionFunc(mouseMoveCallback);
+	glutKeyboardFunc(keyboardCallback);
+	glutKeyboardUpFunc(keyUpCallback);
+
+	glutIdleFunc(idleCallback);
 
 	glutMainLoop();
 
@@ -156,7 +208,6 @@ int openFile(int argc, char **argv)
 
 	const char *arenaPath;
 	arenaPath = arenaFileElement->Attribute("caminho");
-	
 	if(!arenaPath)
 	{
 		cout << "Could not find arena file path. Exiting..." << endl;
@@ -179,6 +230,16 @@ int openFile(int argc, char **argv)
 	strcat(finalPath, arenaFileElement->Attribute("nome"));
 	strcat(finalPath, ".");
 	strcat(finalPath, arenaFileElement->Attribute("tipo"));
+
+	XMLElement *chopperInfoElement = cfg.FirstChildElement()->FirstChildElement("helicoptero");
+	if(!chopperInfoElement)
+	{
+		cerr << "Could not find element: \"helicoptero\"" << endl;
+		return cfg.ErrorID();
+	}
+
+	chopperInfoElement->QueryDoubleAttribute("velTiro", &g_bltSpeed);
+	chopperInfoElement->QueryDoubleAttribute("velHelicoptero", &g_chpSpeed);
 	
 	XMLDocument cfgArena;
 	if(cfgArena.LoadFile(finalPath) != XMLError(0))
@@ -247,7 +308,7 @@ int openFile(int argc, char **argv)
 				sr = 0.5; sg = 0.5; sb = 0.5;
 			}
 
-			newObj = new Rectangle(id, x, y, width, height, r, g, b, strW, sr, sg, sb);
+			newObj = new Rectangle(id, x+width/2, y+height/2, width, height, r, g, b, strW, sr, sg, sb);
 			objects.push_back(newObj);
 		}
 
@@ -262,27 +323,32 @@ int openFile(int argc, char **argv)
 			id = objectElement->Attribute("id");
 
 			double r = 0, g = 0, b = 0;
-			if(strstr(color, "red") != NULL)
-				r = 1;
 
 			if(strstr(color, "green") != NULL)
-				g = 1;
-
-			if(strstr(color, "blue") != NULL)
-				b = 1;
-
-			if(strstr(color, "white") != NULL)
 			{
-				r = 1; g = 1; b = 1;
-			}
+				newObj = new Chopper(id, x, y, radius, g_chpSpeed, g_bltSpeed);
+				objects.push_back(newObj);
+			}else{
 
-			if(strstr(color, "grey") != NULL)
-			{
-				r = 0.5; g = 0.5; b = 0.5;
-			}
+				if(strstr(color, "red") != NULL)
+					r = 1;
 
-			newObj = new Circle(id, x,y,radius,r,g,b);
-			objects.push_back(newObj);
+				if(strstr(color, "blue") != NULL)
+					b = 1;
+
+				if(strstr(color, "white") != NULL)
+				{
+					r = 1; g = 1; b = 1;
+				}
+
+				if(strstr(color, "grey") != NULL)
+				{
+					r = 0.5; g = 0.5; b = 0.5;
+				}
+
+				newObj = new Circle(id, x, y, radius, r, g, b);
+				objects.push_back(newObj);
+			}
 		}
 
 		objectElement = objectElement->NextSiblingElement();

@@ -5,7 +5,7 @@ EXEC=trabalhocg
 SRCS=tinyxml2.cpp main.cpp
 OBJ=$(SRCS:.cpp=.o)
 
-.PHONY: clean
+.PHONY: clean celan lcean
 
 all: $(SRCS) $(EXEC)
 
@@ -18,3 +18,7 @@ $(EXEC): $(OBJ)
 clean: 
 	-rm *.o
 	-rm $(EXEC)
+
+lcean: clean
+
+celan: clean

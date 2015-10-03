@@ -2,5 +2,5 @@
 	<arquivosDeEntrada>
 		<arquivoDaArena nome="arena" tipo="svg" caminho="~/repos/comp_graf/trab3/"></arquivoDaArena>
 	</arquivosDeEntrada>
-	<helicoptero velTiro="0.2" velHelicoptero="0.1"></helicoptero>
+	<helicoptero velTiro="0.2" velHelicoptero="2"></helicoptero>
 </aplicacao>

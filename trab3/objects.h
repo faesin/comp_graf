@@ -3,6 +3,9 @@
 
 #include "vec3.h"
 
+#include <math.h>
+#define _USE_MATH_DEFINES
+
 using namespace std;
 
 typedef unsigned int uint;
@@ -39,30 +42,33 @@ public:
 
 	void draw()
 	{
+		glColor3d(this->getR(), this->getG(), this->getB());
+
 		glPushMatrix();
-			glTranslated((double)this->x, (double)this->y, 0.0);
+			glTranslated(x, y, 0);
+
 			glBegin(GL_POLYGON);
-				glVertex3d(0.0, 0.0, 0.0);
-				glVertex3d(this->width, 0.0, 0.0);
-				glVertex3d(this->width, this->height, 0.0);
-				glVertex3d(0.0, this->height, 0.0);
+				glVertex3d(-width/2, height/2, 0.0);
+				glVertex3d(width/2, height/2, 0.0);
+				glVertex3d(width/2, -height/2, 0.0);
+				glVertex3d(-width/2, -height/2, 0.0);
 			glEnd();
 
 			glColor3d(this->strR, this->strG, this->strB);
-			glLineWidth((float)this->strokeW);
+			glLineWidth(this->strokeW);
 			glBegin(GL_LINE_LOOP);
-				glVertex3d(0.0, 0.0, 0.0);
-				glVertex3d(this->width, 0.0, 0.0);
-				glVertex3d(this->width, this->height, 0.0);
-				glVertex3d(0.0, this->height, 0.0);
+				glVertex3d(-width/2, height/2, 0.0);
+				glVertex3d(width/2, height/2, 0.0);
+				glVertex3d(width/2, -height/2, 0.0);
+				glVertex3d(-width/2, -height/2, 0.0);
 			glEnd();
 
-			glPointSize((float)this->strokeW);
+			glPointSize(this->strokeW);
 			glBegin(GL_POINTS);
-				glVertex3d(0.0, 0.0, 0.0);
-				glVertex3d(this->width, 0.0, 0.0);
-				glVertex3d(this->width, this->height, 0.0);
-				glVertex3d(0.0, this->height, 0.0);
+				glVertex3d(-width/2, height/2, 0.0);
+				glVertex3d(width/2, height/2, 0.0);
+				glVertex3d(width/2, -height/2, 0.0);
+				glVertex3d(-width/2, -height/2, 0.0);
 			glEnd();
 		glPopMatrix();
 	};
@@ -83,6 +89,8 @@ public:
 
 	void draw()
 	{
+		glColor3d(this->getR(), this->getG(), this->getB());
+
 		glPushMatrix();
 			glTranslated((double)this->x, (double)this->y, 0);
 
@@ -106,32 +114,171 @@ public:
 	int getRad() {return radius;};
 };
 
-class Chopper: public Object
+class Triangle: public Object
 {
-	int x, y;
-	double yaw, spdHelix, spdChopper, spdBullet;
-	
-	static const int	bodyWidth = 20,
-						bodyHeight = 35,
-						tailWidth = 5,
-						tailHeight = 22,
-						rotorWidth = 3,
-						rotorHeight = 5;
+	int xt, yt, xb, yb, width;
 
 public:
-
-	Chopper(const char *id, int x, int y, double spdC, double spdB, double yaw = 0):
-	Object(id), x(x), y(y), yaw(yaw), spdChopper(spdC), spdBullet(spdB){};
+	Triangle(const char *id, int x, int y, int x2, int y2, int w, double r, double g, double b):
+	Object(id, r, g, b), xt(x), yt(y), xb(x2), yb(y2), width(w){};
 
 	void draw()
 	{
-		Rectangle body("", x, y, bodyWidth, bodyHeight, 0, 1, 0, 2, 0, 0, 0);
-		body.draw();
+		// glColor3d(this->getR(), this->getG(), this->getB());
+
+		// glPushMatrix();
+		// 	glTranslated((double)this->xt, (double)this->yt, 0);
+
+		// glPopMatrix();
+	}
+
+	int getXT() {return xt;};
+	int getYT() {return yt;};
+
+	int getXB() {return xb;};
+	int getYB() {return yb;};
+
+	int getWidth() {return width;};
+};
+
+class Chopper: public Object
+{
+	int x, y, hitboxRad;
+	double yaw, hlxSpeed, hlxAngle, chpSpeed, bltSpeed;
+
+	short int state; // -1 = landed; 1 = flying;
+	
+	int	bodyWidth,
+		bodyHeight,
+		gunWidth,
+		gunHeight,
+		tailWidth,
+		tailHeight,
+		rotorWidth,
+		rotorHeight,
+		helixWidth,
+		helixHeigth;
+
+public:
+
+	Chopper(const char *id, int x, int y, int rad, double spdC = 1, double spdB = 1.5, double yaw = 0, double hSpeed = 10):
+	Object(id), x(x), y(y), hitboxRad(rad), yaw(yaw), hlxSpeed(hSpeed), chpSpeed(spdC), bltSpeed(spdB)
+	{
+		bodyWidth = hitboxRad/1.25;
+		bodyHeight = hitboxRad/1.25;
+		gunWidth = hitboxRad/6;
+		gunHeight = hitboxRad/2.5;
+		tailWidth = hitboxRad/5.5;
+		tailHeight = hitboxRad/1.65;
+		rotorWidth = hitboxRad/6;
+		rotorHeight = hitboxRad/3;
+		helixWidth = hitboxRad/5.5;
+		helixHeigth = hitboxRad*2;
+		state = -1; 
+		hlxAngle = 0;
+	};
+
+	void draw()
+	{
+		// glPushMatrix();
+		// 	glTranslated(x, y, 0);
+		// 	Circle("hitbox", 0, 0, hitboxRad, 0.5, 0.5, 0.5).draw();
+		// glPopMatrix();
+			
+		glPushMatrix();
+			glTranslated(x, y, 0);
+			if(state == -1)
+				glScaled(1, 1, 1);
+			else
+				glScaled(1.5, 1.5, 1.5);
+
+			glRotated(yaw, 0, 0, 1);
+
+			Rectangle("chpBody", 0, 0, bodyWidth, bodyHeight, 0, 1, 0, 1, 0, 0, 0).draw();
+
+			glPushMatrix();
+				glTranslated(0, (bodyHeight + tailHeight)/2, 0);
+				Rectangle("chpTail", 0, 0, tailWidth, tailHeight, 0, 1, 0, 1, 0, 0, 0).draw();
+
+				glPushMatrix();
+					glTranslated((tailWidth+rotorWidth)/2, tailHeight/2, 0);
+					Rectangle("chpRotor1", 0, 0, rotorWidth, rotorHeight, 0, 1, 0, 1, 0, 0, 0).draw();
+				glPopMatrix();
+
+				glPushMatrix();
+					glTranslated(-(tailWidth+rotorWidth)/2, tailHeight/2, 0);
+					Rectangle("chpRotor2", 0, 0, rotorWidth, rotorHeight, 0, 1, 0, 1, 0, 0, 0).draw();
+				glPopMatrix();
+			glPopMatrix();
+
+			glPushMatrix();
+				glTranslated(0, -(bodyHeight + gunHeight)/2, 0);
+				Rectangle("gun", 0, 0, gunWidth, gunHeight, 1, 1, 0, 1, 0, 0, 0).draw();
+			glPopMatrix();
+		glPopMatrix();
+
+		glPushMatrix();
+			glTranslated(x, y, 0);
+
+			if(state == -1)
+				glScaled(1, 1, 1);
+			else
+			{
+				hlxAngle += hlxSpeed;
+				glScaled(1.5, 1.5, 1.5);
+			}
+			
+			glRotated(hlxAngle, 0, 0, 1);
+
+			Rectangle("helix1", 0, 0, helixWidth, helixHeigth, 0, 0, 1, 1, 0, 0, 0).draw();
+			Rectangle("helix2", 0, 0, helixHeigth, helixWidth, 0, 0, 1, 1, 0, 0, 0).draw();
+
+			Circle("top", 0, 0, helixWidth/2, 0.5, 0.5, 0.5).draw();
+		glPopMatrix();
 
 	};
 
 	int getX(){return x;};
 	int getY(){return y;};
+	double getTurnSpeed(){return chpSpeed;};
+
+	void changeState(){state *= -1;};
+
+	void incRot()
+	{
+		if((hlxSpeed + 2) > 90)
+			hlxSpeed = 360;
+		hlxSpeed += 2;
+	};
+	
+	void decRot()
+	{
+		if((hlxSpeed - 2) < 0)
+			hlxSpeed = 0;
+
+		hlxSpeed -= 2;
+	};
+
+	void moveFoward()
+	{
+		x += ceil(sin(yaw*180/M_PI)*chpSpeed);
+		y += ceil(cos(yaw*180/M_PI)*chpSpeed);
+
+		// cout << "sin(yaw) = " << sin(yaw) << "\t" << "cos(yaw) = " << cos(yaw) << endl;
+		// cout << "dx = " << sin(yaw)*chpSpeed << endl;
+		// cout << "dy = " << cos(yaw)*chpSpeed << endl;
+	};
+
+	void pivot(double dyaw)
+	{
+		if(state != -1)
+			yaw += dyaw;
+
+		// if(yaw > 360)
+			// yaw -= 360;
+
+		// cout << "comp x = " << 
+	}
 };
 
 #endif
