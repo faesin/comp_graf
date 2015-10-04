@@ -143,10 +143,10 @@ public:
 
 class Chopper: public Object
 {
-	int x, y, hitboxRad;
-	double yaw, hlxSpeed, hlxAngle, chpSpeed, bltSpeed;
+	int x, y, hitboxRad, gunx, guny;
+	double yaw, gunAngle, hlxSpeed, hlxAngle, chpSpeed, bltSpeed;
 
-	short int state; // -1 = landed; 1 = flying;
+	short int state, drawHitbox;
 	
 	int	bodyWidth,
 		bodyHeight,
@@ -174,24 +174,28 @@ public:
 		rotorHeight = hitboxRad/3;
 		helixWidth = hitboxRad/5.5;
 		helixHeigth = hitboxRad*2;
-		state = -1; 
+
+		gunx = x;
+		guny = y - bodyWidth/2;
+
+		state = 0;
+		drawHitbox = 0;
 		hlxAngle = 0;
+		gunAngle = 0;
 	};
 
 	void draw()
 	{
-		// glPushMatrix();
-		// 	glTranslated(x, y, 0);
-		// 	Circle("hitbox", 0, 0, hitboxRad, 0.5, 0.5, 0.5).draw();
-		// glPopMatrix();
+		if(drawHitbox)
+		{
+			glPushMatrix();
+				glTranslated(x, y, 0);
+				Circle("hitbox", 0, 0, hitboxRad, 0.5, 0.5, 0.5).draw();
+			glPopMatrix();
+		}
 			
 		glPushMatrix();
 			glTranslated(x, y, 0);
-			if(state == -1)
-				glScaled(1, 1, 1);
-			else
-				glScaled(1.5, 1.5, 1.5);
-
 			glRotated(yaw, 0, 0, 1);
 
 			Rectangle("chpBody", 0, 0, bodyWidth, bodyHeight, 0, 1, 0, 1, 0, 0, 0).draw();
@@ -212,7 +216,10 @@ public:
 			glPopMatrix();
 
 			glPushMatrix();
-				glTranslated(0, -(bodyHeight + gunHeight)/2, 0);
+				glTranslated(0, -bodyHeight/2, 0);
+				glRotated(gunAngle, 0, 0, 1);
+				glTranslated(0, -gunHeight/2, 0);
+
 				Rectangle("gun", 0, 0, gunWidth, gunHeight, 1, 1, 0, 1, 0, 0, 0).draw();
 			glPopMatrix();
 		glPopMatrix();
@@ -220,12 +227,15 @@ public:
 		glPushMatrix();
 			glTranslated(x, y, 0);
 
-			if(state == -1)
-				glScaled(1, 1, 1);
-			else
+			if(state)
 			{
+				if(hlxAngle > 90)
+					hlxAngle -= 90;
+				else
+					if(hlxAngle < -90)
+						hlxAngle += 90;
+
 				hlxAngle += hlxSpeed;
-				glScaled(1.5, 1.5, 1.5);
 			}
 			
 			glRotated(hlxAngle, 0, 0, 1);
@@ -242,43 +252,144 @@ public:
 	int getY(){return y;};
 	double getTurnSpeed(){return chpSpeed;};
 
-	void changeState(){state *= -1;};
+	void changeState()
+	{
+		state = !state;
+
+		if(state){
+			hitboxRad *= 1.5;
+			bodyWidth *= 1.5;
+			bodyHeight *= 1.5;
+			gunWidth *= 1.5;
+			gunHeight *= 1.5;
+			tailWidth *= 1.5;
+			tailHeight *= 1.5;
+			rotorWidth *= 1.5;
+			rotorHeight *= 1.5;
+			helixWidth *= 1.5;
+			helixHeigth *= 1.5;
+			
+		}else{
+			hitboxRad /= 1.5;
+			bodyWidth /= 1.5;
+			bodyHeight /= 1.5;
+			gunWidth /= 1.5;
+			gunHeight /= 1.5;
+			tailWidth /= 1.5;
+			tailHeight /= 1.5;
+			rotorWidth /= 1.5;
+			rotorHeight /= 1.5;
+			helixWidth /= 1.5;
+			helixHeigth /= 1.5;
+		} 
+	};
+	void drawHbx(){drawHitbox = !drawHitbox;};
 
 	void incRot()
 	{
-		if((hlxSpeed + 2) > 90)
-			hlxSpeed = 360;
-		hlxSpeed += 2;
+		if(hlxSpeed >= 45)
+			hlxSpeed = 45.0;
+		else
+			hlxSpeed += 2;
 	};
 	
 	void decRot()
 	{
-		if((hlxSpeed - 2) < 0)
-			hlxSpeed = 0;
-
-		hlxSpeed -= 2;
+		if(hlxSpeed < -45)
+			hlxSpeed = -45;
+		else
+			hlxSpeed -= 2;
 	};
 
 	void moveFoward()
 	{
-		x += ceil(sin(yaw*180/M_PI)*chpSpeed);
-		y += ceil(cos(yaw*180/M_PI)*chpSpeed);
+		if(state)
+		{
+			int dx = round(sin(yaw * M_PI / 180.0)*chpSpeed);
+			int dy = round(cos(yaw * M_PI / 180.0)*chpSpeed);
 
-		// cout << "sin(yaw) = " << sin(yaw) << "\t" << "cos(yaw) = " << cos(yaw) << endl;
-		// cout << "dx = " << sin(yaw)*chpSpeed << endl;
-		// cout << "dy = " << cos(yaw)*chpSpeed << endl;
+			x += dx; y -= dy;
+
+			gunx = this->x + sin(yaw * M_PI / 180.0)*((bodyWidth/2)*1.5);
+			guny = this->y - cos(yaw * M_PI / 180.0)*((bodyWidth/2)*1.5);
+
+			cout << "gun x = " << gunx << " gun y = " << guny << endl;
+		}
 	};
+
+	void moveBackward()
+	{
+		if(state)
+		{
+			int dx = round(sin(yaw * M_PI / 180.0)*chpSpeed);
+			int dy = round(cos(yaw * M_PI / 180.0)*chpSpeed);
+
+			x -= dx; y += dy;
+
+			gunx = this->x + sin(yaw * M_PI / 180.0)*((bodyWidth/2)*1.5);
+			guny = this->y - cos(yaw * M_PI / 180.0)*((bodyWidth/2)*1.5);
+
+			cout << "gun x = " << gunx << " gun y = " << guny << endl;
+		}
+	}
 
 	void pivot(double dyaw)
 	{
-		if(state != -1)
-			yaw += dyaw;
+		if(state)
+		{
+			yaw += dyaw;			
+		}
 
-		// if(yaw > 360)
-			// yaw -= 360;
+		if(yaw >= 360)
+			yaw -= 360;
 
-		// cout << "comp x = " << 
+		if(yaw < 0)
+			yaw += 360;
 	}
+
+	void moveGun(int x, int y)
+	{
+		double dangle;
+
+		if(state)
+		{
+			if(yaw >= 0 && yaw < 90)
+			{
+				dangle = atan2(abs(y - guny), abs(x - gunx)) * 180.0/M_PI;
+				if(abs(dangle) < 45)
+					gunAngle = dangle;
+			
+				cout << gunAngle << " grads" << endl;
+
+			}else if(yaw >= 90 && yaw < 180)
+			{
+				dangle = yaw - atan2(guny - y , x - gunx) * 180.0/M_PI;
+				
+				if(abs(dangle) < 45)
+					gunAngle = dangle;
+			
+				cout << gunAngle << " grads" << endl;
+
+			}else if(yaw >= 180 && yaw < 270)
+			{
+				dangle = yaw - atan2(guny - y , x - gunx) * 180.0/M_PI;
+				
+				if(abs(dangle) < 45)
+					gunAngle = dangle;
+			
+				cout << gunAngle << " grads" << endl;
+			}else if(yaw >= 270 && yaw < 360) 
+			{
+				dangle = yaw - atan2(guny - y , x - gunx) * 180.0/M_PI;
+				
+				if(abs(dangle) < 45)
+					gunAngle = dangle;
+			
+				cout << gunAngle << " grads" << endl;
+			}
+		}
+
+	};
 };
 
 #endif

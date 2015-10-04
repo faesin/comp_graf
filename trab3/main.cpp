@@ -43,16 +43,6 @@ void reshapeCallback(int w, int h)
 	glutReshapeWindow(g_windowSizeX, g_windowSizeY);
 }
 
-void mouseCallback(int button, int state, int x, int y)
-{
-	if(button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN)
-	{
-		player->changeState();
-	}
-
-	glutPostRedisplay();
-}
-
 void keyboardCallback(unsigned char key, int x, int y)
 {
 	key_press[(int)key] = 1;
@@ -65,8 +55,25 @@ void keyUpCallback(unsigned char key, int x, int y)
 	// cout << "Key " << key << " is up" << endl;
 }
 
-void mouseMoveCallback(int x, int y)
+void mouseCallback(int button, int state, int x, int y)
 {
+	if(button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN)
+	{
+		player->changeState();
+	}
+
+	if(button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
+	{
+		cout << "screen x = " << x << "screen y = " << y << endl;
+	}
+
+
+	glutPostRedisplay();
+}
+
+void mousePassiveCallback(int x, int y)
+{
+	player->moveGun(x, y);
 	glutPostRedisplay();
 }
 
@@ -81,11 +88,17 @@ void idleCallback()
 	if(key_press[(int)'w'])
 		player->moveFoward();
 
+	if(key_press[(int)'s'])
+		player->moveBackward();
+
 	if(key_press[(int)'-'])
 		player->decRot();
 
 	if(key_press[(int)'+'])
 		player->incRot();
+
+	if(key_press[(int)'1'])
+		player->drawHbx();
 
 	glutPostRedisplay();
 }
@@ -159,7 +172,7 @@ int main(int argc, char **argv)
 	glutDisplayFunc(displayCallback);
 	glutReshapeFunc(reshapeCallback);
 	glutMouseFunc(mouseCallback);
-	glutMotionFunc(mouseMoveCallback);
+	glutPassiveMotionFunc(mousePassiveCallback);
 	glutKeyboardFunc(keyboardCallback);
 	glutKeyboardUpFunc(keyUpCallback);
 
