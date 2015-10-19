@@ -141,10 +141,41 @@ public:
 	int getWidth() {return width;};
 };
 
+
+class Bullet: public Object
+{
+	int x, y, hitboxRad;
+	double dir, speed;
+public:
+
+	Bullet(const char *id, int x, int y, int rad, double d, double spd):
+	Object(id), x(x), y(y), hitboxRad(rad), dir(d), speed(spd) {}
+	
+	void draw()
+	{
+		
+	}
+
+	vec3 updatePosition(double timeDiff)
+	{
+		x += round(sin(dir * M_PI / 180.0)*speed);
+		y -= round(cos(dir * M_PI / 180.0)*speed);
+
+		return vec3(x, y, 0);
+	}
+
+	int getX(){return x;}
+	int getY(){return y;}
+
+};
+
 class Chopper: public Object
 {
 	int x, y, hitboxRad, gunx, guny;
 	double yaw, gunAngle, hlxSpeed, hlxAngle, chpSpeed, bltSpeed;
+
+	double mouseSens;
+	int mouseLastX;
 
 	short int state, drawHitbox;
 	
@@ -182,6 +213,9 @@ public:
 		drawHitbox = 0;
 		hlxAngle = 0;
 		gunAngle = 0;
+
+		mouseSens = 0.5;
+		mouseLastX = x;
 	};
 
 	void draw()
@@ -282,8 +316,9 @@ public:
 			helixWidth /= 1.5;
 			helixHeigth /= 1.5;
 		} 
-	};
-	void drawHbx(){drawHitbox = !drawHitbox;};
+	}
+
+	void drawHbx(){drawHitbox = !drawHitbox;}
 
 	void incRot()
 	{
@@ -291,7 +326,7 @@ public:
 			hlxSpeed = 45.0;
 		else
 			hlxSpeed += 2;
-	};
+	}
 	
 	void decRot()
 	{
@@ -299,7 +334,7 @@ public:
 			hlxSpeed = -45;
 		else
 			hlxSpeed -= 2;
-	};
+	}
 
 	void moveFoward()
 	{
@@ -312,10 +347,8 @@ public:
 
 			gunx = this->x + sin(yaw * M_PI / 180.0)*((bodyWidth/2)*1.5);
 			guny = this->y - cos(yaw * M_PI / 180.0)*((bodyWidth/2)*1.5);
-
-			cout << "gun x = " << gunx << " gun y = " << guny << endl;
 		}
-	};
+	}
 
 	void moveBackward()
 	{
@@ -349,47 +382,25 @@ public:
 
 	void moveGun(int x, int y)
 	{
-		double dangle;
-
 		if(state)
 		{
-			if(yaw >= 0 && yaw < 90)
-			{
-				dangle = atan2(abs(y - guny), abs(x - gunx)) * 180.0/M_PI;
-				if(abs(dangle) < 45)
-					gunAngle = dangle;
-			
-				cout << gunAngle << " grads" << endl;
+			int mouseMovedX = x - mouseLastX;
 
-			}else if(yaw >= 90 && yaw < 180)
-			{
-				dangle = yaw - atan2(guny - y , x - gunx) * 180.0/M_PI;
-				
-				if(abs(dangle) < 45)
-					gunAngle = dangle;
-			
-				cout << gunAngle << " grads" << endl;
+			gunAngle += mouseMovedX*mouseSens;
+			if(gunAngle > 45)
+				gunAngle = 45;
 
-			}else if(yaw >= 180 && yaw < 270)
-			{
-				dangle = yaw - atan2(guny - y , x - gunx) * 180.0/M_PI;
-				
-				if(abs(dangle) < 45)
-					gunAngle = dangle;
-			
-				cout << gunAngle << " grads" << endl;
-			}else if(yaw >= 270 && yaw < 360) 
-			{
-				dangle = yaw - atan2(guny - y , x - gunx) * 180.0/M_PI;
-				
-				if(abs(dangle) < 45)
-					gunAngle = dangle;
-			
-				cout << gunAngle << " grads" << endl;
-			}
+			if(gunAngle < -45)
+				gunAngle = -45;
+
+			mouseLastX = x;
 		}
+	}
 
-	};
+	Bullet* shoot()
+	{
+		return new Bullet("pewpew", gunx, guny, gunWidth/2, yaw, bltSpeed);
+	}
 };
 
 #endif

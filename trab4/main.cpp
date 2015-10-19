@@ -5,6 +5,7 @@
 #include <cstring>
 #include <map>
 #include <signal.h>
+#include <random>
 
 #include <GL/glut.h>
 #include "tinyxml2.h"
@@ -22,6 +23,10 @@ int g_windowSizeX = 0, g_windowSizeY = 0;
 double g_bltSpeed = 0.0, g_chpSpeed = 0.0;
 
 short int key_press[256];
+
+random_device rd;
+mt19937 eng(rd());
+uniform_int_distribution<> distr(0, 360);
 
 int openFile(int argc, char **argv);
 void sigCallback(int signum);
@@ -112,9 +117,7 @@ void idleCallback()
 		Bullet *baux = dynamic_cast<Bullet*>(objects[i]);
 		if(baux)
 		{
-			vec3 pos = baux->updatePosition(timeDiference);
-			if((pos.x > g_windowSizeX || pos.x < 0) || (pos.y > g_windowSizeY || pos.y < 0))
-				objects.erase(objects.begin()+(i-1));
+			baux->updatePosition(timeDiference);
 		}
 	}
 
@@ -157,9 +160,9 @@ int main(int argc, char **argv)
 			continue;
 		}
 
-		Chopper *paux = dynamic_cast<Chopper*>(objects[i]);
-		if(paux)
+		if(strstr(objects[i]->getID(), "Jogador") != NULL)
 		{
+			Chopper *paux = dynamic_cast<Chopper*>(objects[i]);
 			player = paux;
 			found++;
 			continue;
@@ -168,6 +171,11 @@ int main(int argc, char **argv)
 
 	if(g_windowSizeX == 0 || g_windowSizeY == 0)
 		return -1;
+	else
+		if(player != NULL)
+		{
+			//TODO::
+		}
 
 	char param[] = "swag";
 	char *fakeargv[] = { param, NULL };
@@ -178,7 +186,7 @@ int main(int argc, char **argv)
 	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
 	glutInitWindowSize(g_windowSizeX, g_windowSizeY);
 	glutInitWindowPosition(100, 100);
-	winID =  glutCreateWindow("Trabalho 2");
+	winID = glutCreateWindow("Trabalho 2");
 
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 
@@ -357,29 +365,31 @@ int openFile(int argc, char **argv)
 
 			if(strstr(color, "green") != NULL)
 			{
-				newObj = new Chopper(id, x, y, radius, g_chpSpeed, g_bltSpeed);
+				newObj = new Chopper(id, x, y, radius, 0, g_chpSpeed, g_bltSpeed, 0, 10, 0, 1, 0);
 				objects.push_back(newObj);
 			}else{
-
 				if(strstr(color, "red") != NULL)
-					r = 1;
-
-				if(strstr(color, "blue") != NULL)
+				{
+					newObj = new Chopper(id, x, y, radius, 1, g_chpSpeed, g_bltSpeed, distr(eng), 10, 1, 0, 0);
+					objects.push_back(newObj);
+				}else{
+					if(strstr(color, "blue") != NULL)
 					b = 1;
 
-				if(strstr(color, "white") != NULL)
-				{
-					r = 1; g = 1; b = 1;
-				}
+					if(strstr(color, "white") != NULL)
+					{
+						r = 1; g = 1; b = 1;
+					}
 
-				if(strstr(color, "grey") != NULL)
-				{
-					r = 0.5; g = 0.5; b = 0.5;
-				}
+					if(strstr(color, "grey") != NULL)
+					{
+						r = 0.5; g = 0.5; b = 0.5;
+					}
 
-				newObj = new Circle(id, x, y, radius, r, g, b);
-				objects.push_back(newObj);
-			}
+					newObj = new Circle(id, x, y, radius, r, g, b);
+					objects.push_back(newObj);
+				}
+			}			
 		}
 
 		objectElement = objectElement->NextSiblingElement();
