@@ -1,7 +1,14 @@
 #include "objects.h"
 
+/* =========================================================== */
+/* ========================= GLOBALS ========================= */
+/* =========================================================== */
 
+static int g_limitX, g_limitY;
+
+/* ============================================================= */
 /* ========================= RECTANGLE ========================= */
+/* ============================================================= */
 
 void Rectangle::draw()
 {
@@ -36,7 +43,10 @@ void Rectangle::draw()
 	glPopMatrix();
 }
 
+
+/* ========================================================== */
 /* ========================= CIRCLE ========================= */
+/* ========================================================== */
 
 void Circle::draw()
 {
@@ -60,15 +70,31 @@ void Circle::draw()
 	glPopMatrix();
 }
 
+
+/* ========================================================== */
 /* ========================= BULLET ========================= */
+/* ========================================================== */
+
+
+void Bullet::draw()
+{
+	glPushMatrix();
+		glTranslated(x, y, 0);
+		Circle("bulit", 0, 0, hitboxRad, 0.15, 0.15, 0.15).draw();
+	glPopMatrix();
+}
 
 void Bullet::updatePosition(double timeDiff)
 {
-	x += round(sin(dir * M_PI / 180.0)*speed);
-	y -= round(cos(dir * M_PI / 180.0)*speed);
+	x += sin(dir * M_PI / 180.0)*speed*timeDiff;
+	y -= cos(dir * M_PI / 180.0)*speed*timeDiff;
 }
 
+
+/* =========================================================== */
 /* ========================= CHOPPER ========================= */
+/* =========================================================== */
+
 
 Chopper::Chopper(const char *id, int x, int y, int rad, int st, double spdC, double spdB,
 		double yaw, double hSpeed, double r, double g, double b) :
@@ -99,6 +125,12 @@ Chopper::Chopper(const char *id, int x, int y, int rad, int st, double spdC, dou
 
 	if(st)
 		this->changeState();
+}
+
+void Chopper::setLimits(int x, int y)
+{
+	g_limitX = x;
+	g_limitY = y;
 }
 
 void Chopper::draw()
@@ -223,10 +255,14 @@ void Chopper::moveFoward()
 		int dx = round(sin(yaw * M_PI / 180.0)*chpSpeed);
 		int dy = round(cos(yaw * M_PI / 180.0)*chpSpeed);
 
+		if(x + hitboxRad + dx > g_limitX || x - hitboxRad + dx < 0)
+			dx = 0;
+
+		if(y + hitboxRad - dy > g_limitY || y - hitboxRad - dy < 0)
+			dy = 0;
+
 		x += dx; y -= dy;
 
-		gunx = this->x + sin(yaw * M_PI / 180.0)*((bodyWidth/2)*1.5);
-		guny = this->y - cos(yaw * M_PI / 180.0)*((bodyWidth/2)*1.5);
 	}
 }
 
@@ -237,13 +273,23 @@ void Chopper::moveBackward()
 		int dx = round(sin(yaw * M_PI / 180.0)*chpSpeed);
 		int dy = round(cos(yaw * M_PI / 180.0)*chpSpeed);
 
+		if(x + hitboxRad - dx > g_limitX || x - hitboxRad - dx < 0)
+			dx = 0;
+
+		if(y + hitboxRad + dy > g_limitY || y - hitboxRad + dy < 0)
+			dy = 0;
+
 		x -= dx; y += dy;
-
-		gunx = this->x + sin(yaw * M_PI / 180.0)*((bodyWidth/2)*1.5);
-		guny = this->y - cos(yaw * M_PI / 180.0)*((bodyWidth/2)*1.5);
-
-		cout << "gun x = " << gunx << " gun y = " << guny << endl;
 	}
+
+}
+
+vec3 Chopper::getNextPosition(int direc)
+{
+	int dx = round(sin(yaw * M_PI / 180.0)*chpSpeed);
+	int dy = round(cos(yaw * M_PI / 180.0)*chpSpeed);
+
+	return vec3(x + (direc) * dx, y - (direc) * dy, 0);
 }
 
 void Chopper::pivot(double dyaw)
@@ -277,5 +323,13 @@ void Chopper::moveGun(int x, int y)
 
 Bullet* Chopper::shoot()
 {
-	return new Bullet("pewpew", gunx, guny, gunWidth/2, yaw, bltSpeed);
+	if(state)
+	{
+		gunx = this->x + round(sin(yaw * M_PI / 180.0)*(bodyWidth/2)*1.5);
+		guny = this->y - round(cos(yaw * M_PI / 180.0)*(bodyWidth/2)*1.5);
+
+		return new Bullet("pewpew", gunx, guny, gunWidth/2, gunAngle + yaw, bltSpeed, this->getID());
+	}
+
+	return NULL;
 }

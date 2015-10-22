@@ -4,8 +4,6 @@
 #include <vector>
 #include <cstring>
 #include <map>
-#include <signal.h>
-#include <random>
 
 #include <GL/glut.h>
 #include "tinyxml2.h"
@@ -17,28 +15,44 @@ using namespace tinyxml2;
 
 int winID;
 
-vector<Object*> objects;
-Chopper *player;
+vector<Object*> g_objects;
+vector<Bullet*> g_bullets;
+vector<Chopper*> g_choppers;
+
+Chopper *g_player;
+
+random_device rd;
+mt19937 eng;
+uniform_int_distribution<> distr(0, 360);
+
 int g_windowSizeX = 0, g_windowSizeY = 0;
 double g_bltSpeed = 0.0, g_chpSpeed = 0.0;
 
+int g_winCond = 0;
+
+int once = 1;
+
 short int key_press[256];
 
-random_device rd;
-mt19937 eng(rd());
-uniform_int_distribution<> distr(0, 360);
-
 int openFile(int argc, char **argv);
-void sigCallback(int signum);
+int checkPlayerColision(vec3 pos);
+void makeBulletColision();
 
 void displayCallback(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	for(uint i = 0; i < objects.size(); ++i)
-	{
-		objects[i]->draw();
-	}
+	for(uint i = 0; i < g_objects.size(); ++i)
+		g_objects[i]->draw();
+
+	for(uint i = 0; i < g_bullets.size(); ++i)
+		g_bullets[i]->draw();
+
+	for(uint i = 0; i < g_choppers.size(); ++i)
+		g_choppers[i]->draw();
+
+	g_player->draw();
+
 
 	glutSwapBuffers();
 }
@@ -51,7 +65,7 @@ void reshapeCallback(int w, int h)
 void keyboardCallback(unsigned char key, int x, int y)
 {
 	key_press[(int)key] = 1;
-	// cout << "Key " << key << " is pressed" << endl;
+	// cout << "Key " << (int)key << " is pressed" << endl;
 }
 
 void keyUpCallback(unsigned char key, int x, int y)
@@ -64,12 +78,14 @@ void mouseCallback(int button, int state, int x, int y)
 {
 	if(button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN)
 	{
-		player->changeState();
+		g_player->changeState();
 	}
 
 	if(button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
 	{
-		// objects.push_back(player->shoot());
+		Bullet *aux = g_player->shoot();
+		if(aux != NULL)
+			g_bullets.push_back(aux);
 	}
 
 	glutPostRedisplay();
@@ -77,33 +93,66 @@ void mouseCallback(int button, int state, int x, int y)
 
 void mousePassiveCallback(int x, int y)
 {
-	player->moveGun(x, y);
+	g_player->moveGun(x, y);
 	glutPostRedisplay();
 }
 
 void idleCallback()
 {
 	if(key_press[(int)'a'])
-		player->pivot(-player->getTurnSpeed());
+		g_player->pivot(-g_player->getTurnSpeed());
 
 	if(key_press[(int)'d'])
-		player->pivot(player->getTurnSpeed());
+		g_player->pivot(g_player->getTurnSpeed());
 
 	if(key_press[(int)'w'])
-		player->moveFoward();
+	{
+		if(!checkPlayerColision(g_player->getNextPosition(1)))
+			g_player->moveFoward();
+	}
 
 	if(key_press[(int)'s'])
-		player->moveBackward();
+	{
+		if(!checkPlayerColision(g_player->getNextPosition(-1)))
+			g_player->moveBackward();
+	}
 
 	if(key_press[(int)'-'])
-		player->decRot();
+		g_player->decRot();
 
 	if(key_press[(int)'+'])
-		player->incRot();
+		g_player->incRot();
 
 	if(key_press[(int)'1'])
-		player->drawHbx();
+		g_player->drawHbx();
 
+	if(key_press[(int)'2'] && once)
+	{
+		Chopper* aux = g_player;
+		g_player = g_choppers.back();
+		g_choppers.pop_back();
+		g_choppers.push_back(aux);
+
+		once = 0;
+	}
+
+	if(key_press[27])
+	{
+		for(uint i = 0; i < g_objects.size(); ++i)
+			delete g_objects[i];
+		for(uint i = 0; i < g_choppers.size(); ++i)
+			delete g_choppers[i];
+		for(uint i = 0; i < g_bullets.size(); ++i)
+			delete g_bullets[i];
+
+		g_objects.clear();
+		g_choppers.clear();
+		g_bullets.clear();
+
+		delete g_player;
+
+		exit(0);
+	}
 
 	static GLdouble previousTime = 0;
 
@@ -112,31 +161,24 @@ void idleCallback()
 	timeDiference = currentTime - previousTime;
 	previousTime = currentTime;
 
-	for(uint i = 0; i < objects.size(); ++i)
+	for(uint i = 0; i < g_bullets.size(); ++i)
+		g_bullets[i]->updatePosition(timeDiference);
+
+	makeBulletColision();
+
+	// cout << g_bullets.size() << endl;
+
+	if(g_player == NULL)
 	{
-		Bullet *baux = dynamic_cast<Bullet*>(objects[i]);
-		if(baux)
-		{
-			baux->updatePosition(timeDiference);
-		}
+		cout << "YOU LOSE" << endl;
+		exit(0);
 	}
 
 	glutPostRedisplay();
 }
 
-// void sigCallback(int signum)
-// {
-// 	glutIdleFunc(NULL);
-
-// 	objects.clear();
-// 	glutDestroyWindow(winID);
-// 	exit(signum);
-// }
-
 int main(int argc, char **argv)
 {
-	// signal(SIGINT, sigCallback);
-
 	for(uint i = 0; i < 256; ++i)
 		key_press[i] = 0;
 
@@ -145,37 +187,22 @@ int main(int argc, char **argv)
 	if(err != 0)
 		return err;
 
-	for(uint i = 0; i < objects.size(); ++i)
+	for(uint i = 0; i < g_objects.size(); ++i)
 	{
-		int found = 0;
-		if(found == 2)
-			break;
-
-		if(strstr(objects[i]->getID(), "Arena") != NULL)
+		if(strstr(g_objects[i]->getID(), "Arena") != NULL)
 		{
-			Rectangle *aux = dynamic_cast<Rectangle*>(objects[i]);
+			Rectangle *aux = dynamic_cast<Rectangle*>(g_objects[i]);
 			g_windowSizeX = aux->getWidth();
 			g_windowSizeY = aux->getHeight();
-			found++;
-			continue;
-		}
-
-		if(strstr(objects[i]->getID(), "Jogador") != NULL)
-		{
-			Chopper *paux = dynamic_cast<Chopper*>(objects[i]);
-			player = paux;
-			found++;
-			continue;
+			break;
 		}
 	}
 
 	if(g_windowSizeX == 0 || g_windowSizeY == 0)
 		return -1;
 	else
-		if(player != NULL)
-		{
-			//TODO::
-		}
+		if(g_player != NULL)
+			g_player->setLimits(g_windowSizeX, g_windowSizeY);
 
 	char param[] = "swag";
 	char *fakeargv[] = { param, NULL };
@@ -293,7 +320,6 @@ int openFile(int argc, char **argv)
 
 	do 
 	{
-		Object *newObj;
 		if(strstr(objectElement->Name(), "rect") != NULL)
 		{
 			int x, y, width, height, strW;
@@ -347,8 +373,7 @@ int openFile(int argc, char **argv)
 				sr = 0.5; sg = 0.5; sb = 0.5;
 			}
 
-			newObj = new Rectangle(id, x+width/2, y+height/2, width, height, r, g, b, strW, sr, sg, sb);
-			objects.push_back(newObj);
+			g_objects.push_back(new Rectangle(id, x+width/2, y+height/2, width, height, r, g, b, strW, sr, sg, sb));
 		}
 
 		if(strstr(objectElement->Name(), "circle") != NULL)
@@ -365,13 +390,12 @@ int openFile(int argc, char **argv)
 
 			if(strstr(color, "green") != NULL)
 			{
-				newObj = new Chopper(id, x, y, radius, 0, g_chpSpeed, g_bltSpeed, 0, 10, 0, 1, 0);
-				objects.push_back(newObj);
+				g_player = new Chopper(id, x, y, radius, 0, g_chpSpeed, g_bltSpeed, 0, 10, 0, 1, 0);
 			}else{
 				if(strstr(color, "red") != NULL)
 				{
-					newObj = new Chopper(id, x, y, radius, 1, g_chpSpeed, g_bltSpeed, distr(eng), 10, 1, 0, 0);
-					objects.push_back(newObj);
+					g_choppers.push_back(new Chopper(id, x, y, radius, 1, g_chpSpeed, g_bltSpeed, distr(eng), 10, 1, 0, 0));
+					g_choppers.back()->drawHbx();
 				}else{
 					if(strstr(color, "blue") != NULL)
 					b = 1;
@@ -386,8 +410,7 @@ int openFile(int argc, char **argv)
 						r = 0.5; g = 0.5; b = 0.5;
 					}
 
-					newObj = new Circle(id, x, y, radius, r, g, b);
-					objects.push_back(newObj);
+					g_objects.push_back(new Circle(id, x, y, radius, r, g, b));
 				}
 			}			
 		}
@@ -396,4 +419,80 @@ int openFile(int argc, char **argv)
 	}while(objectElement != NULL);
 
 	return cfg.ErrorID();
+}
+
+int checkPlayerColision(vec3 pos)
+{
+	for(uint i = 0; i < g_choppers.size(); ++i)
+	{
+		int dx = g_choppers[i]->getX() - pos.x;
+		int dy = g_choppers[i]->getY() - pos.y;
+
+		double dist = sqrt(dx * dx + dy * dy);
+
+		if(dist <= g_choppers[i]->getHitboxRad() + g_player->getHitboxRad())
+			return 1;
+	}
+
+	return 0;
+}
+
+void makeBulletColision()
+{
+	vector<Bullet*>::iterator bIt;
+	
+	for(bIt = g_bullets.begin(); bIt != g_bullets.end();)
+	{
+		bool bErased = false;
+		if(strstr((*bIt)->getOwner(), "Jogador") != NULL)
+		{
+			vector<Chopper*>::iterator cIt;
+			for(cIt = g_choppers.begin(); cIt != g_choppers.end(); ++cIt)
+			{
+				int dx = (*cIt)->getX() - (*bIt)->getX();
+				int dy = (*cIt)->getY() - (*bIt)->getY();
+
+				double dist = sqrt(dx * dx + dy * dy);
+
+				if(dist <= (*cIt)->getHitboxRad() + (*bIt)->getHitboxRad())
+				{
+					Bullet *baux = *bIt;
+					g_bullets.erase(bIt);
+					delete baux;
+
+					Chopper *caux = *cIt;
+					g_choppers.erase(cIt);
+					delete caux;
+
+					bErased = true;
+					break;
+				}
+			}
+		}else{
+			int dx = g_player->getX() - (*bIt)->getX();
+			int dy = g_player->getY() - (*bIt)->getY();
+
+			double dist = sqrt(dx * dx + dy * dy);
+
+			if(dist <= g_player->getHitboxRad() + (*bIt)->getHitboxRad())
+			{
+				g_winCond = -1;
+			}
+		}
+
+		if(bErased)
+			continue;
+		
+		if(((*bIt)->getX() < 0 || (*bIt)->getX() > g_windowSizeX)
+			|| ((*bIt)->getY() < 0 || (*bIt)->getY() > g_windowSizeY))
+		{
+			Bullet *aux = *bIt;
+			g_bullets.erase(bIt);
+			delete aux;
+			bErased = true;
+		}
+
+		if(!bErased)
+			++bIt;
+	}
 }
