@@ -91,6 +91,43 @@ void Bullet::updatePosition(double timeDiff)
 }
 
 
+/* ========================================================== */
+/* =========================== IA =========================== */
+/* ========================================================== */
+
+random_device IA::rd;
+mt19937 IA::eng;
+
+IA::IA(double seekTimer){
+
+	IA::eng = mt19937(IA::rd());
+	this->seekTimer = seekTimer;
+	this->instrTimer = 1000;
+	cout << seekTimer << " " << instrTimer << endl;
+	
+	uniform_int_distribution<> distr(0, 8);
+	this->current_instr = static_cast<instr_t>(distr(IA::eng));
+	this->instrStartTime = glutGet(GLUT_ELAPSED_TIME);
+}
+
+void IA::doStep()
+{
+	double now = glutGet(GLUT_ELAPSED_TIME);
+	cout << (now - this->instrStartTime) * instrTimer << endl;
+	// if((glutGet(GLUT_ELAPSED_TIME) - this->instrStartTime) * seekTimer >= 1)
+	// 	this->current_instr = SEEK;
+	// else{
+		if((now - this->instrStartTime) >= instrTimer)
+		{
+			cout << "change" << endl;
+			uniform_int_distribution<> distr(0, 8);
+			this->current_instr = static_cast<instr_t>(distr(IA::eng));
+			this->instrStartTime = glutGet(GLUT_ELAPSED_TIME);
+		}
+	// }
+
+}
+
 /* =========================================================== */
 /* ========================= CHOPPER ========================= */
 /* =========================================================== */
@@ -135,6 +172,7 @@ void Chopper::setLimits(int x, int y)
 
 void Chopper::draw()
 {
+	double uniX = 0, uniY = -1;
 	if(drawHitbox)
 	{
 		glPushMatrix();
@@ -145,7 +183,16 @@ void Chopper::draw()
 		
 	glPushMatrix();
 		glTranslated(x, y, 0);
+		gunx = x;
+		guny = y;
+
 		glRotated(yaw, 0, 0, 1);
+		
+		uniX = sin(yaw*M_PI/180);
+		uniY = cos(yaw*M_PI/180);
+
+		gunx += uniX * bodyWidth/2;
+		guny -= uniY * bodyHeight/2;
 
 		Rectangle("chpBody", 0, 0, bodyWidth, bodyHeight, 
 				this->getR(), this->getG(), this->getB(), 1, 0, 0, 0).draw();
@@ -284,8 +331,72 @@ void Chopper::moveBackward()
 
 }
 
+void Chopper::moveByIA()
+{
+	if(this->intel)
+	{
+		switch(this->intel->getInstr())
+		{
+			case STAY:
+				break;
+			case TURN_R:
+				this->pivot(this->chpSpeed);
+				break;
+			case TURN_L:
+				this->pivot(-this->chpSpeed);
+				break;
+			case FOWARD:
+				this->moveFoward();
+				break;
+			case TURNFWRD_L:
+				this->pivot(-this->chpSpeed);
+				this->moveFoward();
+			case TURNFWRD_R:
+				this->pivot(this->chpSpeed);
+				this->moveFoward();
+				break;
+			case BACKWARD:
+				this->moveBackward();
+				break;
+			case TURNBACK_L:
+				this->pivot(-this->chpSpeed);
+				this->moveBackward();
+			case TURNBACK_R:
+				this->pivot(this->chpSpeed);
+				this->moveBackward();
+				break;
+			default:
+				break;
+		}
+	}
+}
+
 vec3 Chopper::getNextPosition(int direc)
 {
+	if(this->intel)
+	{
+		switch(this->intel->getInstr())
+		{
+			case STAY:
+			case TURN_R:
+			case TURN_L:
+				direc = 0;
+				break;
+			case FOWARD:
+			case TURNFWRD_L:
+			case TURNFWRD_R:
+				direc = 1;
+				break;
+			case BACKWARD:
+			case TURNBACK_L:
+			case TURNBACK_R:
+				direc = -1;
+				break;
+			default:
+				break;
+		}
+	}
+
 	int dx = round(sin(yaw * M_PI / 180.0)*chpSpeed);
 	int dy = round(cos(yaw * M_PI / 180.0)*chpSpeed);
 
@@ -325,11 +436,16 @@ Bullet* Chopper::shoot()
 {
 	if(state)
 	{
-		gunx = this->x + round(sin(yaw * M_PI / 180.0)*(bodyWidth/2)*1.5);
-		guny = this->y - round(cos(yaw * M_PI / 180.0)*(bodyWidth/2)*1.5);
+		// gunx = this->x + round(sin(yaw * M_PI / 180.0)*(bodyWidth/2)*1.5);
+		// guny = this->y - round(cos(yaw * M_PI / 180.0)*(bodyWidth/2)*1.5);
 
 		return new Bullet("pewpew", gunx, guny, gunWidth/2, gunAngle + yaw, bltSpeed, this->getID());
 	}
 
 	return NULL;
+}
+
+ostream& operator<<(std::ostream& out, const Chopper& c)
+{
+	return out << c.getID() << " -> x:" << c.getX() << " y:" << c.getY() << " yaw:" << c.getYaw();
 }

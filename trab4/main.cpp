@@ -26,7 +26,7 @@ mt19937 eng;
 uniform_int_distribution<> distr(0, 360);
 
 int g_windowSizeX = 0, g_windowSizeY = 0;
-double g_bltSpeed = 0.0, g_chpSpeed = 0.0;
+double g_bltSpeed = 0.0, g_chpSpeed = 0.0, g_enemySpeed = 0.0, g_enemySeek = 0.0;
 
 int g_winCond = 0;
 
@@ -37,6 +37,7 @@ short int key_press[256];
 int openFile(int argc, char **argv);
 int checkPlayerColision(vec3 pos);
 void makeBulletColision();
+void makeIAStep();
 
 void displayCallback(void)
 {
@@ -48,11 +49,10 @@ void displayCallback(void)
 	for(uint i = 0; i < g_bullets.size(); ++i)
 		g_bullets[i]->draw();
 
-	for(uint i = 0; i < g_choppers.size(); ++i)
-		g_choppers[i]->draw();
-
 	g_player->draw();
 
+	for(uint i = 0; i < g_choppers.size(); ++i)
+		g_choppers[i]->draw();
 
 	glutSwapBuffers();
 }
@@ -136,6 +136,11 @@ void idleCallback()
 		once = 0;
 	}
 
+	if(key_press[(int)'3'])
+	{
+		makeIAStep();
+	}
+
 	if(key_press[27])
 	{
 		for(uint i = 0; i < g_objects.size(); ++i)
@@ -165,10 +170,11 @@ void idleCallback()
 		g_bullets[i]->updatePosition(timeDiference);
 
 	makeBulletColision();
+	// makeIAStep();
 
 	// cout << g_bullets.size() << endl;
 
-	if(g_player == NULL)
+	if(g_winCond == -1)
 	{
 		cout << "YOU LOSE" << endl;
 		exit(0);
@@ -225,6 +231,7 @@ int main(int argc, char **argv)
 	glutDisplayFunc(displayCallback);
 	glutReshapeFunc(reshapeCallback);
 	glutMouseFunc(mouseCallback);
+	glutMotionFunc(mousePassiveCallback);
 	glutPassiveMotionFunc(mousePassiveCallback);
 	glutKeyboardFunc(keyboardCallback);
 	glutKeyboardUpFunc(keyUpCallback);
@@ -306,6 +313,16 @@ int openFile(int argc, char **argv)
 
 	chopperInfoElement->QueryDoubleAttribute("velTiro", &g_bltSpeed);
 	chopperInfoElement->QueryDoubleAttribute("velHelicoptero", &g_chpSpeed);
+
+	XMLElement *enemyChopperInfoElement = cfg.FirstChildElement()->FirstChildElement("helicopteroInimigo");
+	if(!enemyChopperInfoElement)
+	{
+		cerr << "Could not find element: \"helicopteroInimigo\"" << endl;
+		return cfg.ErrorID();
+	}
+
+	enemyChopperInfoElement->QueryDoubleAttribute("freqTiro", &g_enemySeek);
+	enemyChopperInfoElement->QueryDoubleAttribute("velHelicoptero", &g_enemySpeed);
 	
 	XMLDocument cfgArena;
 	if(cfgArena.LoadFile(finalPath) != XMLError(0))
@@ -394,8 +411,9 @@ int openFile(int argc, char **argv)
 			}else{
 				if(strstr(color, "red") != NULL)
 				{
-					g_choppers.push_back(new Chopper(id, x, y, radius, 1, g_chpSpeed, g_bltSpeed, distr(eng), 10, 1, 0, 0));
+					g_choppers.push_back(new Chopper(id, x, y, radius, 1, g_enemySpeed, g_bltSpeed, distr(eng), 10, 1, 0, 0));
 					g_choppers.back()->drawHbx();
+					g_choppers.back()->setIntel(new IA(g_enemySeek));
 				}else{
 					if(strstr(color, "blue") != NULL)
 					b = 1;
@@ -435,6 +453,61 @@ int checkPlayerColision(vec3 pos)
 	}
 
 	return 0;
+}
+
+void makeIAStep()
+{
+	for(vector<Chopper*>::iterator cIt = g_choppers.begin(); cIt != g_choppers.end(); ++cIt)
+	{
+		bool colide = false;
+		(*cIt)->doStep();
+		
+		if((*cIt)->getCurrInstr() == SEEK)
+		{
+			vec3 pos((*cIt)->getX(), (*cIt)->getY(), 0);
+			int quad = 0;
+			if(pos.x < )
+		}else{
+			vec3 pos = (*cIt)->getNextPosition(0);
+
+			if(g_player->getState())
+			{
+				int dx = pos.x - g_player->getX();
+				int dy = pos.y - g_player->getY();
+
+				double dist = sqrt(dx * dx + dy * dy);
+
+				if(dist <= (*cIt)->getHitboxRad() + g_player->getHitboxRad())
+				{
+					colide = true;
+				}
+			}
+
+			for(vector<Chopper*>::iterator aIt = g_choppers.begin(); aIt != g_choppers.end(); ++aIt)
+			{
+				if(cIt != aIt)
+				{
+					vec3 pos2 = (*aIt)->getNextPosition(0);
+
+					int dx = pos.x - pos2.x;
+					int dy = pos.y - pos2.y;
+
+					double dist = sqrt(dx * dx + dy * dy);
+
+					if(dist <= (*cIt)->getHitboxRad() + (*aIt)->getHitboxRad())
+					{
+						colide = true;
+					}
+				}
+			}
+
+			if(!colide)
+			{
+				(*cIt)->moveByIA();
+			}			
+		}
+
+	}
 }
 
 void makeBulletColision()

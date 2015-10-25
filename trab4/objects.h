@@ -5,6 +5,7 @@
 #include <sstream>
 #include <cstring>
 #include <random>
+#include <time.h>
 
 #include <GL/glut.h>
 #include "vec3.h"
@@ -15,6 +16,18 @@
 using namespace std;
 
 typedef unsigned int uint;
+typedef enum {
+	STAY = 0,
+	FOWARD = 1,
+	BACKWARD = 2,
+	TURN_R = 3,
+	TURN_L = 4,
+	TURNFWRD_R = 5,
+	TURNFWRD_L = 6,
+	TURNBACK_R = 7,
+	TURNBACK_L = 8,
+	SEEK
+} instr_t;
 
 class Object
 {
@@ -22,15 +35,15 @@ public:
 	Object(const char* nid, double R = 0, double G = 0, double B = 0) : r(R), g(G), b(B) {id[0] = '\0'; strcat(id, nid);};
 	virtual ~Object() {};
 	virtual void draw() = 0;
-	virtual int getX() = 0;
-	virtual int getY() = 0;
+	virtual int getX() const = 0;
+	virtual int getY() const = 0;
 
-	void setColor(double r, double g, double b) {this->r = r; this->g = g; this->b = b;};
-	const char* getID() {return this->id;};
+	void setColor(double r, double g, double b) { this->r = r; this->g = g; this->b = b; };
+	const char* getID() const { return this->id; };
 	
-	double getR() {return r;};
-	double getG() {return g;};
-	double getB() {return b;};
+	double getR() const { return r; };
+	double getG() const { return g; };
+	double getB() const { return b; };
 protected:
 	char id[256];
 	double r, g, b;
@@ -51,9 +64,9 @@ public:
 
 	void draw();
 
-	int getX() {return x;};
-	int getY() {return y;};
-	int getWidth() {return width;};
+	int getX() const {return x;};
+	int getY() const {return y;};
+	int getWidth() const {return width;};
 	int getHeight() {return height;};
 };
 
@@ -69,9 +82,9 @@ public:
 
 	void draw();
 
-	int getX() {return x;};
-	int getY() {return y;};
-	int getRad() {return radius;};
+	int getX() const {return x;};
+	int getY() const {return y;};
+	int getRad() const {return radius;};
 };
 
 class Bullet: public Object
@@ -88,13 +101,40 @@ public:
 
 	~Bullet(){};
 
-	int getX(){ return x; };
-	int getY(){ return y; };
-	int getHitboxRad(){ return hitboxRad; };
-	char* getOwner(){ return ownerID; };
+	int getX() const { return x; };
+	int getY() const { return y; };
+	int getHitboxRad() const { return hitboxRad; };
+	char* getOwner() { return ownerID; };
 	
 	void draw();
 	void updatePosition(double timeDiff);
+};
+
+class IA
+{
+	instr_t current_instr;
+
+	bool enableInt = false;
+	bool didSeek = false;
+
+	double instrStartTime, seekTimer, instrTimer;
+
+	static random_device rd;
+	static mt19937 eng;
+
+public:
+
+	IA(double seekTimer);
+
+	~IA(){};
+
+	void setInstr(int instr){ current_instr = static_cast<instr_t>(instr); };
+	void setSeekDone(){ didSeek = true; };
+	int getInstr() const { return current_instr; };
+
+	void switchInt(){ enableInt = !enableInt; };
+	void doStep();
+
 };
 
 class Chopper: public Object
@@ -102,7 +142,7 @@ class Chopper: public Object
 	int x, y, hitboxRad, gunx, guny;
 	double yaw, gunAngle, hlxSpeed, hlxAngle, chpSpeed, bltSpeed;
 
-	vec3 gunVector;
+	IA *intel;
 
 	double mouseSens;
 	int mouseLastX;
@@ -124,26 +164,34 @@ public:
 	Chopper(const char *id, int x, int y, int rad, int st, double spdC = 1, double spdB = 1.5,
 			double yaw = 0, double hSpeed = 10, double r = 0, double g = 1, double b = 0);
 
-	~Chopper(){};
+	~Chopper(){ delete intel; };
 
 	void draw();
 
-	int getX(){ return x; };
-	int getY(){ return y; };
-	int getHitboxRad(){ return hitboxRad; };
+	int getX() const { return x; };
+	int getY() const { return y; };
+	int getYaw() const { return yaw; };
+	int getHitboxRad() const { return hitboxRad; };
+	int getCurrInstr() const { return intel->getInstr(); };
+
 	void setX(int x){ this->x = x; };
 	void setY(int y){ this->y = y; };
+	void setIntel(IA *intel){ this->intel = intel; };
+	void didSeek(){ this->intel->setSeekDone(); };
 
-	double getTurnSpeed(){ return chpSpeed; };
+	double getTurnSpeed() const { return chpSpeed; };
 	void drawHbx(){ drawHitbox = !drawHitbox; };
 	void setLimits(int x, int y);
 
+	void doStep(){ this->intel->doStep(); };
 	void changeState();
+	short int getState(){ return this->state; };
 	void incRot();
 	void decRot();
 	
 	void moveFoward();
 	void moveBackward();
+	void moveByIA();
 
 	vec3 getNextPosition(int direc);
 
@@ -151,5 +199,7 @@ public:
 	void moveGun(int x, int y);
 	Bullet* shoot();
 };
+
+ostream& operator<<(std::ostream& out, const Chopper& c);
 
 #endif
