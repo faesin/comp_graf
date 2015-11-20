@@ -29,7 +29,10 @@ void displayCallback(void)
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	if(g_createPoligon)
+	{
+		glFlush();
 		return;
+	}
 
 	glColor3f(0.0, 1.0, 0.0);
 	glBegin(GL_POLYGON);
@@ -64,7 +67,6 @@ void mouseCallback(int button, int state, int x, int y)
 	{
 		if(g_createPoligon)
 		{
-			cout << "x: " << x << " y: " << y << endl;
 			for(uint i = 0; i < g_poligon.size(); ++i)
 			{
 				g_poligon[i].second.x += x;
@@ -205,8 +207,8 @@ int openFile(int argc, char **argv)
 		g_poligon.push_back(make_pair(id, vec3((double) x, (double)y, 0.0)));
 	}
 
-	for(int i = 0; i < numOfVertex; ++i)
-		cout << g_poligon[i].first << " -> " << g_poligon[i].second << endl;
+	// for(int i = 0; i < numOfVertex; ++i)
+	// 	cout << g_poligon[i].first << " -> " << g_poligon[i].second << endl;
 
 	return cfg.ErrorID();
 }

@@ -20,6 +20,7 @@ vector<Bullet*> g_bullets;
 vector<Chopper*> g_choppers;
 
 Chopper *g_player;
+Rectangle *g_posto;
 
 random_device rd;
 mt19937 eng;
@@ -27,17 +28,24 @@ uniform_int_distribution<> distr(0, 360);
 
 int g_windowSizeX = 0, g_windowSizeY = 0;
 double g_bltSpeed = 0.0, g_chpSpeed = 0.0, g_enemySpeed = 0.0, g_enemySeek = 0.0;
+double g_initFuel = 150;
 
 int g_winCond = 0;
 
 int once = 1;
 
 short int key_press[256];
+char g_winMsg[10] = "YOU WON";
+char g_loseMsg[10] = "YOU LOSE";
 
 int openFile(int argc, char **argv);
 int checkPlayerColision(vec3 pos);
+void makePlayerColision();
 void makeBulletColision();
 void makeIAStep();
+
+void renderBitmapString(int x, int y, void *font, char *string);
+void drawFuel();
 
 void displayCallback(void)
 {
@@ -54,6 +62,14 @@ void displayCallback(void)
 	for(uint i = 0; i < g_choppers.size(); ++i)
 		g_choppers[i]->draw();
 
+	if(g_winCond == 1)
+		renderBitmapString(g_windowSizeX/2 - 10, g_windowSizeY/2, GLUT_BITMAP_9_BY_15, g_winMsg);
+
+	if(g_winCond == -1)
+		renderBitmapString(g_windowSizeX/2 - 10, g_windowSizeY/2, GLUT_BITMAP_9_BY_15, g_loseMsg);
+
+	drawFuel();
+
 	glutSwapBuffers();
 }
 
@@ -65,6 +81,13 @@ void reshapeCallback(int w, int h)
 void keyboardCallback(unsigned char key, int x, int y)
 {
 	key_press[(int)key] = 1;
+	// cout << "Key " << (int)key << " is pressed" << endl;
+}
+
+void dumbKeyboardCallback(unsigned char key, int x, int y)
+{
+	if((int)key == 27)
+		key_press[(int)key] = 1;
 	// cout << "Key " << (int)key << " is pressed" << endl;
 }
 
@@ -136,10 +159,10 @@ void idleCallback()
 		once = 0;
 	}
 
-	if(key_press[(int)'3'])
-	{
-		makeIAStep();
-	}
+	// if(key_press[(int)'3'])
+	// {
+	// 	makeIAStep();
+	// }
 
 	if(key_press[27])
 	{
@@ -159,26 +182,71 @@ void idleCallback()
 		exit(0);
 	}
 
-	static GLdouble previousTime = 0;
+	bool maybeWin;
 
-	GLdouble currentTime, timeDiference;
-	currentTime = glutGet(GLUT_ELAPSED_TIME);
-	timeDiference = currentTime - previousTime;
-	previousTime = currentTime;
+	for(vector<Object*>::iterator it = g_objects.begin(); it != g_objects.end(); ++it)
+	{
+		maybeWin = true;
+		if(strstr((*it)->getID(), "ObjetoResgate") != NULL)
+			maybeWin = false;
+	}
 
-	for(uint i = 0; i < g_bullets.size(); ++i)
-		g_bullets[i]->updatePosition(timeDiference);
+	if(maybeWin)
+		g_winCond = 1;
 
-	makeBulletColision();
-	// makeIAStep();
+	if(g_winCond == 0)
+	{
+		static GLdouble previousTime = 0;
 
-	// cout << g_bullets.size() << endl;
+		GLdouble currentTime, timeDiference;
+		currentTime = glutGet(GLUT_ELAPSED_TIME);
+		timeDiference = currentTime - previousTime;
+		previousTime = currentTime;
+
+		for(uint i = 0; i < g_bullets.size(); ++i)
+			g_bullets[i]->updatePosition(timeDiference);
+
+		makeBulletColision();
+		makePlayerColision();
+
+		makeIAStep();		
+	}
+
+	if(g_winCond == 1)
+	{
+		if(once)
+		{
+			cout << "ganhou" << endl;
+			once = 0;
+		}
+
+		glutMotionFunc(NULL);
+		glutPassiveMotionFunc(NULL);
+		glutKeyboardFunc(dumbKeyboardCallback);
+
+		for(uint i = 0; i < 256; ++i)
+			key_press[i] = 0;
+	}
+
+	if(g_player->getFuel() <= 0)
+		g_winCond = -1;
 
 	if(g_winCond == -1)
 	{
-		cout << "YOU LOSE" << endl;
-		exit(0);
+		if(once)
+		{
+			cout << "Perdeu" << endl;
+			once = 0;
+		}
+
+		glutMotionFunc(NULL);
+		glutPassiveMotionFunc(NULL);
+		glutKeyboardFunc(dumbKeyboardCallback);
+
+		for(uint i = 0; i < 256; ++i)
+			key_press[i] = 0;
 	}
+
 
 	glutPostRedisplay();
 }
@@ -204,6 +272,16 @@ int main(int argc, char **argv)
 		}
 	}
 
+	for(uint i = 0; i < g_objects.size(); ++i)
+	{
+		if(strstr(g_objects[i]->getID(), "PostoAbastecimento") != NULL)
+		{
+			Rectangle *aux = dynamic_cast<Rectangle*>(g_objects[i]);
+			g_posto = aux;
+			break;
+		}
+	}
+
 	if(g_windowSizeX == 0 || g_windowSizeY == 0)
 		return -1;
 	else
@@ -218,7 +296,7 @@ int main(int argc, char **argv)
 
 	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
 	glutInitWindowSize(g_windowSizeX, g_windowSizeY);
-	glutInitWindowPosition(100, 100);
+	glutInitWindowPosition(10, 10);
 	winID = glutCreateWindow("Trabalho 2");
 
 	glClearColor(0.0, 0.0, 0.0, 0.0);
@@ -412,7 +490,7 @@ int openFile(int argc, char **argv)
 				if(strstr(color, "red") != NULL)
 				{
 					g_choppers.push_back(new Chopper(id, x, y, radius, 1, g_enemySpeed, g_bltSpeed, distr(eng), 10, 1, 0, 0));
-					g_choppers.back()->drawHbx();
+					// g_choppers.back()->drawHbx();
 					g_choppers.back()->setIntel(new IA(g_enemySeek));
 				}else{
 					if(strstr(color, "blue") != NULL)
@@ -455,6 +533,53 @@ int checkPlayerColision(vec3 pos)
 	return 0;
 }
 
+void makePlayerColision()
+{
+	for(vector<Object*>::iterator it = g_objects.begin(); it != g_objects.end();)
+	{
+		bool erased = false;
+		if(strstr((*it)->getID(), "ObjetoResgate") != NULL)
+		{
+			Circle *rescueObj = dynamic_cast<Circle*>(*it);
+			if(rescueObj)
+			{
+				int dx = rescueObj->getX() - g_player->getX();
+				int dy = rescueObj->getY() - g_player->getY();
+
+				double dist = sqrt(dx * dx + dy * dy);
+
+				if(dist <= rescueObj->getRad() + g_player->getHitboxRad())
+				{
+					g_objects.erase(it);
+					delete rescueObj;
+					erased = true;
+				}
+			}
+		}
+
+		if(!erased)
+			++it;
+	}
+
+	if(g_player->getState() == 0)
+	{
+		vec3 aux(g_posto->getX() - g_posto->getWidth()/2, g_posto->getY() - g_posto->getHeight()/2, 0);
+		int width = g_posto->getWidth(),
+			height = g_posto->getHeight();
+
+		// cout << "x from " << aux.x << " to " << aux.x + width << endl;
+		// cout << "y from " << aux.y << " to " << aux.y + height << endl;
+		// cout << g_player->getX() << " " << g_player->getY() << endl;
+
+		if((g_player->getX() >= aux.x && g_player->getX() <= aux.x + width)
+			&& (g_player->getY() >= aux.y && g_player->getY() <= aux.y + height))
+		{
+			// cout << "refuel" << endl;
+			g_player->refuel(0.2);
+		}
+	}
+}
+
 void makeIAStep()
 {
 	for(vector<Chopper*>::iterator cIt = g_choppers.begin(); cIt != g_choppers.end(); ++cIt)
@@ -464,9 +589,29 @@ void makeIAStep()
 		
 		if((*cIt)->getCurrInstr() == SEEK)
 		{
-			vec3 pos((*cIt)->getX(), (*cIt)->getY(), 0);
-			int quad = 0;
-			if(pos.x < )
+			//vec3 vet((*cIt)->getX(), (*cIt)->getY(), 0);
+			// int quad = 0;
+			// cout << vet << endl;
+			// cout << atan2(vet.y, vet.x) << endl;
+
+			// if(vet.x <= g_player->getX() && vet.y >= g_player->getY())
+			// 	quad = 1;
+			// if(vet.x <= g_player->getX() && vet.y < g_player->getY())
+			// 	quad = 2;
+			// if(vet.x > g_player->getX() && vet.y < g_player->getY())
+			// 	quad = 3;
+			// if(vet.x < g_player->getX() && vet.y >= g_player->getY())
+			// 	quad = 4;
+
+			// cout << quad << endl;
+
+			Bullet *aux = (*cIt)->shoot();
+			if(aux != NULL)
+				g_bullets.push_back(aux);
+			
+			(*cIt)->setSeekDone();
+
+
 		}else{
 			vec3 pos = (*cIt)->getNextPosition(0);
 
@@ -549,7 +694,8 @@ void makeBulletColision()
 
 			if(dist <= g_player->getHitboxRad() + (*bIt)->getHitboxRad())
 			{
-				g_winCond = -1;
+				if(g_player->getState())
+					g_winCond = -1;
 			}
 		}
 
@@ -568,4 +714,50 @@ void makeBulletColision()
 		if(!bErased)
 			++bIt;
 	}
+}
+
+void renderBitmapString(int x, int y, void *font, char *string)
+{
+	glColor3f(0, 0, 0);
+	char *c;
+	glRasterPos2f(x, y);
+	for(c = string; *c != '\0'; c++) {
+		glutBitmapCharacter(font, *c);
+	}
+}
+
+void drawFuel()
+{
+	int height = 10;
+	int width = g_player->getFuel();
+	glColor3d(0.75, 0, 0.75);
+
+	glPushMatrix();
+		glTranslated(g_windowSizeX - 160, g_windowSizeY - 15, 0);
+
+		glBegin(GL_POLYGON);
+			glVertex3d(0, 0, 0.0);
+			glVertex3d(width, 0, 0.0);
+			glVertex3d(width, height, 0.0);
+			glVertex3d(0, height, 0.0);
+		glEnd();
+
+		glColor3d(0, 0, 0);
+		glLineWidth(1);
+		glBegin(GL_LINE_LOOP);
+			glVertex3d(0, 0, 0.0);
+			glVertex3d(g_initFuel, 0, 0.0);
+			glVertex3d(g_initFuel, height, 0.0);
+			glVertex3d(0, height, 0.0);
+		glEnd();
+
+		glPointSize(1);
+		glBegin(GL_POINTS);
+			glVertex3d(0, 0, 0.0);
+			glVertex3d(g_initFuel, 0, 0.0);
+			glVertex3d(g_initFuel, height, 0.0);
+			glVertex3d(0, height, 0.0);
+		glEnd();
+	glPopMatrix();
+	glPopMatrix();
 }

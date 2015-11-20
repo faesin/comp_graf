@@ -10,7 +10,7 @@ OBJ=$(SRCS:.cpp=.o)
 all: $(SRCS) $(EXEC)
 
 $(EXEC): $(OBJ)
-	$(CC) $(LFLAGS) $(OBJ) -o $@
+	$(CC) $(OBJ) -o $@ $(LFLAGS)
 
 .cpp.o:
 	$(CC) $(CFLAGS) $< -o $@

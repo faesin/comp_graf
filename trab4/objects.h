@@ -5,7 +5,8 @@
 #include <sstream>
 #include <cstring>
 #include <random>
-#include <time.h>
+#include <sys/time.h>
+#include <chrono>
 
 #include <GL/glut.h>
 #include "vec3.h"
@@ -117,7 +118,9 @@ class IA
 	bool enableInt = false;
 	bool didSeek = false;
 
-	double instrStartTime, seekTimer, instrTimer;
+	long long lastTime;
+	double fillShoot, fillChange;
+	double shootsPerMilli, changeMove;
 
 	static random_device rd;
 	static mt19937 eng;
@@ -129,7 +132,7 @@ public:
 	~IA(){};
 
 	void setInstr(int instr){ current_instr = static_cast<instr_t>(instr); };
-	void setSeekDone(){ didSeek = true; };
+	void setSeekDone();
 	int getInstr() const { return current_instr; };
 
 	void switchInt(){ enableInt = !enableInt; };
@@ -143,6 +146,8 @@ class Chopper: public Object
 	double yaw, gunAngle, hlxSpeed, hlxAngle, chpSpeed, bltSpeed;
 
 	IA *intel;
+
+	double fuel, fuelMax;
 
 	double mouseSens;
 	int mouseLastX;
@@ -171,13 +176,16 @@ public:
 	int getX() const { return x; };
 	int getY() const { return y; };
 	int getYaw() const { return yaw; };
+	int getFuel() const { return fuel; };
 	int getHitboxRad() const { return hitboxRad; };
 	int getCurrInstr() const { return intel->getInstr(); };
 
 	void setX(int x){ this->x = x; };
 	void setY(int y){ this->y = y; };
 	void setIntel(IA *intel){ this->intel = intel; };
-	void didSeek(){ this->intel->setSeekDone(); };
+	void setFuel(int f){ this->fuel = f; };
+	void refuel(double delta);
+	void setSeekDone(){ this->intel->setSeekDone(); };
 
 	double getTurnSpeed() const { return chpSpeed; };
 	void drawHbx(){ drawHitbox = !drawHitbox; };
@@ -201,5 +209,6 @@ public:
 };
 
 ostream& operator<<(std::ostream& out, const Chopper& c);
+long long getCurrentTimeMS();
 
 #endif

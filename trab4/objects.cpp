@@ -4,6 +4,8 @@
 /* ========================= GLOBALS ========================= */
 /* =========================================================== */
 
+long long getCurrentTimeMS();
+
 static int g_limitX, g_limitY;
 
 /* ============================================================= */
@@ -98,34 +100,43 @@ void Bullet::updatePosition(double timeDiff)
 random_device IA::rd;
 mt19937 IA::eng;
 
-IA::IA(double seekTimer){
+IA::IA(double spm){
 
 	IA::eng = mt19937(IA::rd());
-	this->seekTimer = seekTimer;
-	this->instrTimer = 1000;
-	cout << seekTimer << " " << instrTimer << endl;
+	this->shootsPerMilli = spm;
+	this->changeMove = spm*5;
+	this->lastTime = getCurrentTimeMS();
+	// cout << seekTimer << " " << instrTimer << endl;
 	
 	uniform_int_distribution<> distr(0, 8);
 	this->current_instr = static_cast<instr_t>(distr(IA::eng));
-	this->instrStartTime = glutGet(GLUT_ELAPSED_TIME);
 }
 
 void IA::doStep()
 {
-	double now = glutGet(GLUT_ELAPSED_TIME);
-	cout << (now - this->instrStartTime) * instrTimer << endl;
-	// if((glutGet(GLUT_ELAPSED_TIME) - this->instrStartTime) * seekTimer >= 1)
-	// 	this->current_instr = SEEK;
-	// else{
-		if((now - this->instrStartTime) >= instrTimer)
+	long long now = getCurrentTimeMS();
+	fillShoot += (double)(now - this->lastTime) * shootsPerMilli;
+
+	if(fillShoot >= 1)
+	{
+		this->current_instr = SEEK;
+	}else{
+		fillChange += (now - this->lastTime) * changeMove;
+		if(fillChange >= 1)
 		{
-			cout << "change" << endl;
 			uniform_int_distribution<> distr(0, 8);
 			this->current_instr = static_cast<instr_t>(distr(IA::eng));
-			this->instrStartTime = glutGet(GLUT_ELAPSED_TIME);
+			fillChange = 0;
 		}
-	// }
+	}
+	
+	this->lastTime = now;
+}
 
+void IA::setSeekDone()
+{
+	this->fillShoot = 0;
+	this->fillChange = 1;
 }
 
 /* =========================================================== */
@@ -162,6 +173,9 @@ Chopper::Chopper(const char *id, int x, int y, int rad, int st, double spdC, dou
 
 	if(st)
 		this->changeState();
+
+	fuel = 150;
+	fuelMax = 150;
 }
 
 void Chopper::setLimits(int x, int y)
@@ -279,6 +293,13 @@ void Chopper::changeState()
 	} 
 }
 
+void Chopper::refuel(double delta)
+{
+	// cout << fuel + delta << endl;
+	if(fuel + delta <= fuelMax)
+		this->fuel += delta;
+};
+
 void Chopper::incRot()
 {
 	if(hlxSpeed >= 45)
@@ -310,6 +331,7 @@ void Chopper::moveFoward()
 
 		x += dx; y -= dy;
 
+		fuel -= 0.1;
 	}
 }
 
@@ -327,8 +349,9 @@ void Chopper::moveBackward()
 			dy = 0;
 
 		x -= dx; y += dy;
-	}
 
+		fuel -= 0.1;
+	}
 }
 
 void Chopper::moveByIA()
@@ -413,6 +436,8 @@ void Chopper::pivot(double dyaw)
 
 	if(yaw < 0)
 		yaw += 360;
+
+	fuel -= 0.1;
 }
 
 void Chopper::moveGun(int x, int y)
@@ -448,4 +473,13 @@ Bullet* Chopper::shoot()
 ostream& operator<<(std::ostream& out, const Chopper& c)
 {
 	return out << c.getID() << " -> x:" << c.getX() << " y:" << c.getY() << " yaw:" << c.getYaw();
+}
+
+long long getCurrentTimeMS()
+{
+	struct timeval tp;
+	gettimeofday(&tp, NULL);
+	long long mslong = (long long) tp.tv_sec * 1000L + tp.tv_usec / 1000; //get current timestamp in milliseconds
+	// std::cout << mslong << std::endl;
+	return mslong;
 }
