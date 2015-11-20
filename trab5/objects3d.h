@@ -74,6 +74,7 @@ public:
 
 	GLfloat getX() const {return x;};
 	GLfloat getY() const {return y;};
+	GLfloat getZ() const {return y;};
 	int getRad() const {return radius;};
 };
 
