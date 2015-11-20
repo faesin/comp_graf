@@ -553,14 +553,9 @@ void makePlayerColision(GLdouble timeDiff)
 		int width = g_posto->getWidth(),
 			height = g_posto->getHeight();
 
-		// cout << "x from " << aux.x << " to " << aux.x + width << endl;
-		// cout << "y from " << aux.y << " to " << aux.y + height << endl;
-		// cout << g_player->getX() << " " << g_player->getY() << endl;
-
 		if((g_player->getX() >= aux.x && g_player->getX() <= aux.x + width)
 			&& (g_player->getY() >= aux.y && g_player->getY() <= aux.y + height))
 		{
-			// cout << timeDiff*2 << endl;
 			g_player->refuel(timeDiff*2/1000);
 		}
 	}
