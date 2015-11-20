@@ -28,7 +28,7 @@ uniform_int_distribution<> distr(0, 360);
 
 int g_windowSizeX = 0, g_windowSizeY = 0;
 double g_bltSpeed = 0.0, g_chpSpeed = 0.0, g_enemySpeed = 0.0, g_enemySeek = 0.0;
-double g_initFuel = 150;
+double g_initFuelTime;
 
 int g_winCond = 0;
 
@@ -40,9 +40,9 @@ char g_loseMsg[10] = "YOU LOSE";
 
 int openFile(int argc, char **argv);
 int checkPlayerColision(vec3 pos);
-void makePlayerColision();
-void makeBulletColision();
-void makeIAStep();
+void makePlayerColision(GLdouble timeDiff);
+void makeBulletColision(GLdouble timeDiff);
+void makeIAStep(GLdouble timeDiff);
 
 void renderBitmapString(int x, int y, void *font, char *string);
 void drawFuel();
@@ -81,20 +81,17 @@ void reshapeCallback(int w, int h)
 void keyboardCallback(unsigned char key, int x, int y)
 {
 	key_press[(int)key] = 1;
-	// cout << "Key " << (int)key << " is pressed" << endl;
 }
 
 void dumbKeyboardCallback(unsigned char key, int x, int y)
 {
 	if((int)key == 27)
 		key_press[(int)key] = 1;
-	// cout << "Key " << (int)key << " is pressed" << endl;
 }
 
 void keyUpCallback(unsigned char key, int x, int y)
 {
 	key_press[(int)key] = 0;
-	// cout << "Key " << key << " is up" << endl;
 }
 
 void mouseCallback(int button, int state, int x, int y)
@@ -122,22 +119,29 @@ void mousePassiveCallback(int x, int y)
 
 void idleCallback()
 {
+	static GLdouble previousTime = 0;
+
+	GLdouble currentTime, timeDifference;
+	currentTime = glutGet(GLUT_ELAPSED_TIME);
+	timeDifference = currentTime - previousTime;
+	previousTime = currentTime;
+
 	if(key_press[(int)'a'])
-		g_player->pivot(-g_player->getTurnSpeed());
+		g_player->pivot(-g_player->getTurnSpeed(), timeDifference);
 
 	if(key_press[(int)'d'])
-		g_player->pivot(g_player->getTurnSpeed());
+		g_player->pivot(g_player->getTurnSpeed(), timeDifference);
 
 	if(key_press[(int)'w'])
 	{
 		if(!checkPlayerColision(g_player->getNextPosition(1)))
-			g_player->moveFoward();
+			g_player->moveFoward(timeDifference);
 	}
 
 	if(key_press[(int)'s'])
 	{
 		if(!checkPlayerColision(g_player->getNextPosition(-1)))
-			g_player->moveBackward();
+			g_player->moveBackward(timeDifference);
 	}
 
 	if(key_press[(int)'-'])
@@ -146,23 +150,8 @@ void idleCallback()
 	if(key_press[(int)'+'])
 		g_player->incRot();
 
-	if(key_press[(int)'1'])
-		g_player->drawHbx();
-
-	if(key_press[(int)'2'] && once)
-	{
-		Chopper* aux = g_player;
-		g_player = g_choppers.back();
-		g_choppers.pop_back();
-		g_choppers.push_back(aux);
-
-		once = 0;
-	}
-
-	// if(key_press[(int)'3'])
-	// {
-	// 	makeIAStep();
-	// }
+	// if(key_press[(int)'1'])
+	// 	g_player->drawHbx();
 
 	if(key_press[27])
 	{
@@ -196,20 +185,15 @@ void idleCallback()
 
 	if(g_winCond == 0)
 	{
-		static GLdouble previousTime = 0;
-
-		GLdouble currentTime, timeDiference;
-		currentTime = glutGet(GLUT_ELAPSED_TIME);
-		timeDiference = currentTime - previousTime;
-		previousTime = currentTime;
+		g_player->useFuel(timeDifference/1000);
 
 		for(uint i = 0; i < g_bullets.size(); ++i)
-			g_bullets[i]->updatePosition(timeDiference);
+			g_bullets[i]->updatePosition(timeDifference);
 
-		makeBulletColision();
-		makePlayerColision();
+		makeBulletColision(timeDifference);
+		makePlayerColision(timeDifference);
 
-		makeIAStep();		
+		makeIAStep(timeDifference);
 	}
 
 	if(g_winCond == 1)
@@ -339,7 +323,7 @@ int openFile(int argc, char **argv)
 	if(cfg.LoadFile(cfgPath) != XMLError(0))
 	{
 		cerr << "Could not load file" << endl;
-		cerr << "\t=> Does the file exists, or is it well writen?" << endl;
+		cerr << "\t=> Does the file (" << cfgPath << ") exists, or is it well writen?" << endl;
 		return cfg.ErrorID();
 	}
 
@@ -391,6 +375,9 @@ int openFile(int argc, char **argv)
 
 	chopperInfoElement->QueryDoubleAttribute("velTiro", &g_bltSpeed);
 	chopperInfoElement->QueryDoubleAttribute("velHelicoptero", &g_chpSpeed);
+	chopperInfoElement->QueryDoubleAttribute("tempoDeVoo", &g_initFuelTime);
+
+	cout << g_initFuelTime << endl;
 
 	XMLElement *enemyChopperInfoElement = cfg.FirstChildElement()->FirstChildElement("helicopteroInimigo");
 	if(!enemyChopperInfoElement)
@@ -485,12 +472,11 @@ int openFile(int argc, char **argv)
 
 			if(strstr(color, "green") != NULL)
 			{
-				g_player = new Chopper(id, x, y, radius, 0, g_chpSpeed, g_bltSpeed, 0, 10, 0, 1, 0);
+				g_player = new Chopper(id, x, y, radius, 0, g_chpSpeed, g_bltSpeed, 0, 10, g_initFuelTime, 0, 1, 0);
 			}else{
 				if(strstr(color, "red") != NULL)
 				{
-					g_choppers.push_back(new Chopper(id, x, y, radius, 1, g_enemySpeed, g_bltSpeed, distr(eng), 10, 1, 0, 0));
-					// g_choppers.back()->drawHbx();
+					g_choppers.push_back(new Chopper(id, x, y, radius, 1, g_enemySpeed, g_bltSpeed, distr(eng), 10, g_initFuelTime, 1, 0, 0));
 					g_choppers.back()->setIntel(new IA(g_enemySeek));
 				}else{
 					if(strstr(color, "blue") != NULL)
@@ -533,7 +519,7 @@ int checkPlayerColision(vec3 pos)
 	return 0;
 }
 
-void makePlayerColision()
+void makePlayerColision(GLdouble timeDiff)
 {
 	for(vector<Object*>::iterator it = g_objects.begin(); it != g_objects.end();)
 	{
@@ -574,13 +560,13 @@ void makePlayerColision()
 		if((g_player->getX() >= aux.x && g_player->getX() <= aux.x + width)
 			&& (g_player->getY() >= aux.y && g_player->getY() <= aux.y + height))
 		{
-			// cout << "refuel" << endl;
-			g_player->refuel(0.2);
+			// cout << timeDiff*2 << endl;
+			g_player->refuel(timeDiff*2/1000);
 		}
 	}
 }
 
-void makeIAStep()
+void makeIAStep(GLdouble timeDiff)
 {
 	for(vector<Chopper*>::iterator cIt = g_choppers.begin(); cIt != g_choppers.end(); ++cIt)
 	{
@@ -648,14 +634,14 @@ void makeIAStep()
 
 			if(!colide)
 			{
-				(*cIt)->moveByIA();
+				(*cIt)->moveByIA(timeDiff);
 			}			
 		}
 
 	}
 }
 
-void makeBulletColision()
+void makeBulletColision(GLdouble timeDiff)
 {
 	vector<Bullet*>::iterator bIt;
 	
@@ -728,17 +714,18 @@ void renderBitmapString(int x, int y, void *font, char *string)
 
 void drawFuel()
 {
-	int height = 10;
-	int width = g_player->getFuel();
+	int height = 20;
+	int boxwidth = 100;
+	GLdouble currWidth = g_player->getFuel()*100/g_initFuelTime;
 	glColor3d(0.75, 0, 0.75);
 
 	glPushMatrix();
-		glTranslated(g_windowSizeX - 160, g_windowSizeY - 15, 0);
+		glTranslated(g_windowSizeX - 120, g_windowSizeY - 30, 0);
 
 		glBegin(GL_POLYGON);
 			glVertex3d(0, 0, 0.0);
-			glVertex3d(width, 0, 0.0);
-			glVertex3d(width, height, 0.0);
+			glVertex3d(currWidth, 0, 0.0);
+			glVertex3d(currWidth, height, 0.0);
 			glVertex3d(0, height, 0.0);
 		glEnd();
 
@@ -746,18 +733,18 @@ void drawFuel()
 		glLineWidth(1);
 		glBegin(GL_LINE_LOOP);
 			glVertex3d(0, 0, 0.0);
-			glVertex3d(g_initFuel, 0, 0.0);
-			glVertex3d(g_initFuel, height, 0.0);
+			glVertex3d(boxwidth, 0, 0.0);
+			glVertex3d(boxwidth, height, 0.0);
 			glVertex3d(0, height, 0.0);
 		glEnd();
 
 		glPointSize(1);
 		glBegin(GL_POINTS);
 			glVertex3d(0, 0, 0.0);
-			glVertex3d(g_initFuel, 0, 0.0);
-			glVertex3d(g_initFuel, height, 0.0);
+			glVertex3d(boxwidth, 0, 0.0);
+			glVertex3d(boxwidth, height, 0.0);
 			glVertex3d(0, height, 0.0);
 		glEnd();
-	glPopMatrix();
+
 	glPopMatrix();
 }

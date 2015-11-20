@@ -1,6 +1,6 @@
 <aplicacao>
 	<arquivosDeEntrada>
-		<arquivoDaArena nome="arena" tipo="svg" caminho="~/caminho/do/arquivo/"></arquivoDaArena>
+		<arquivoDaArena nome="arena" tipo="svg" caminho="/home/rafael/repos/comp_graf/trab5/"></arquivoDaArena>
 	</arquivosDeEntrada>
 	<helicoptero velTiro="0.2" velHelicoptero="0.1" tempoDeVoo="20"></helicoptero>
 	<helicopteroInimigo freqTiro="0.0001" velHelicoptero="0.1"></helicopteroInimigo>

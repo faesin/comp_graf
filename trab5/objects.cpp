@@ -17,30 +17,30 @@ void Rectangle::draw()
 	glColor3d(this->getR(), this->getG(), this->getB());
 
 	glPushMatrix();
-		glTranslated(x, y, 0);
+		glTranslatef(x, y, 0);
 
 		glBegin(GL_POLYGON);
-			glVertex3d(-width/2, height/2, 0.0);
-			glVertex3d(width/2, height/2, 0.0);
-			glVertex3d(width/2, -height/2, 0.0);
-			glVertex3d(-width/2, -height/2, 0.0);
+			glVertex3f(-width/2, height/2, 0.0);
+			glVertex3f(width/2, height/2, 0.0);
+			glVertex3f(width/2, -height/2, 0.0);
+			glVertex3f(-width/2, -height/2, 0.0);
 		glEnd();
 
-		glColor3d(this->strR, this->strG, this->strB);
+		glColor3f(this->strR, this->strG, this->strB);
 		glLineWidth(this->strokeW);
 		glBegin(GL_LINE_LOOP);
-			glVertex3d(-width/2, height/2, 0.0);
-			glVertex3d(width/2, height/2, 0.0);
-			glVertex3d(width/2, -height/2, 0.0);
-			glVertex3d(-width/2, -height/2, 0.0);
+			glVertex3f(-width/2, height/2, 0.0);
+			glVertex3f(width/2, height/2, 0.0);
+			glVertex3f(width/2, -height/2, 0.0);
+			glVertex3f(-width/2, -height/2, 0.0);
 		glEnd();
 
 		glPointSize(this->strokeW);
 		glBegin(GL_POINTS);
-			glVertex3d(-width/2, height/2, 0.0);
-			glVertex3d(width/2, height/2, 0.0);
-			glVertex3d(width/2, -height/2, 0.0);
-			glVertex3d(-width/2, -height/2, 0.0);
+			glVertex3f(-width/2, height/2, 0.0);
+			glVertex3f(width/2, height/2, 0.0);
+			glVertex3f(width/2, -height/2, 0.0);
+			glVertex3f(-width/2, -height/2, 0.0);
 		glEnd();
 	glPopMatrix();
 }
@@ -55,7 +55,7 @@ void Circle::draw()
 	glColor3d(this->getR(), this->getG(), this->getB());
 
 	glPushMatrix();
-		glTranslated((double)this->x, (double)this->y, 0);
+		glTranslatef((double)this->x, (double)this->y, 0);
 
 		static const double circle_points = 100;
 		static const float angle = 2.0f * 3.1416f / circle_points;
@@ -64,7 +64,7 @@ void Circle::draw()
 		glBegin(GL_POLYGON);
 			for(double angle1 = 0.0, i = 0; i < circle_points; ++i)
 			{
-				glVertex3d(this->radius*cos(angle1), this->radius * sin(angle1), 0);
+				glVertex3f(this->radius*cos(angle1), this->radius * sin(angle1), 0);
 				angle1 += angle;
 			}
 		glEnd();
@@ -81,12 +81,12 @@ void Circle::draw()
 void Bullet::draw()
 {
 	glPushMatrix();
-		glTranslated(x, y, 0);
+		glTranslatef(x, y, 0);
 		Circle("bulit", 0, 0, hitboxRad, 0.15, 0.15, 0.15).draw();
 	glPopMatrix();
 }
 
-void Bullet::updatePosition(double timeDiff)
+void Bullet::updatePosition(GLdouble timeDiff)
 {
 	x += sin(dir * M_PI / 180.0)*speed*timeDiff;
 	y -= cos(dir * M_PI / 180.0)*speed*timeDiff;
@@ -144,9 +144,9 @@ void IA::setSeekDone()
 /* =========================================================== */
 
 
-Chopper::Chopper(const char *id, int x, int y, int rad, int st, double spdC, double spdB,
-		double yaw, double hSpeed, double r, double g, double b) :
-	Object(id, r, g, b), x(x), y(y), hitboxRad(rad), yaw(yaw), hlxSpeed(hSpeed), chpSpeed(spdC), bltSpeed(spdB)
+Chopper::Chopper(const char *id, GLfloat x, GLfloat y, int rad, int st, double spdC, double spdB,
+		double yaw, double hSpeed, double fuel, double r, double g, double b) :
+	Object(id, r, g, b), x(x), y(y), hitboxRad(rad), yaw(yaw), hlxSpeed(hSpeed), chpSpeed(spdC), bltSpeed(spdB), fuelTime(fuel), fuelTimeMax(fuel)
 {
 	bodyWidth = hitboxRad/1.25;
 	bodyHeight = hitboxRad/1.25;
@@ -173,9 +173,6 @@ Chopper::Chopper(const char *id, int x, int y, int rad, int st, double spdC, dou
 
 	if(st)
 		this->changeState();
-
-	fuel = 150;
-	fuelMax = 150;
 }
 
 void Chopper::setLimits(int x, int y)
@@ -190,17 +187,17 @@ void Chopper::draw()
 	if(drawHitbox)
 	{
 		glPushMatrix();
-			glTranslated(x, y, 0);
+			glTranslatef(x, y, 0);
 			Circle("hitbox", 0, 0, hitboxRad, 0.5, 0.5, 0.5).draw();
 		glPopMatrix();
 	}
 		
 	glPushMatrix();
-		glTranslated(x, y, 0);
+		glTranslatef(x, y, 0);
 		gunx = x;
 		guny = y;
 
-		glRotated(yaw, 0, 0, 1);
+		glRotatef(yaw, 0, 0, 1);
 		
 		uniX = sin(yaw*M_PI/180);
 		uniY = cos(yaw*M_PI/180);
@@ -212,34 +209,34 @@ void Chopper::draw()
 				this->getR(), this->getG(), this->getB(), 1, 0, 0, 0).draw();
 
 		glPushMatrix();
-			glTranslated(0, (bodyHeight + tailHeight)/2, 0);
+			glTranslatef(0, (bodyHeight + tailHeight)/2, 0);
 			Rectangle("chpTail", 0, 0, tailWidth, tailHeight, 
 					this->getR(), this->getG(), this->getB(), 1, 0, 0, 0).draw();
 
 			glPushMatrix();
-				glTranslated((tailWidth+rotorWidth)/2, tailHeight/2, 0);
+				glTranslatef((tailWidth+rotorWidth)/2, tailHeight/2, 0);
 				Rectangle("chpRotor1", 0, 0, rotorWidth, rotorHeight, 
 						this->getR(), this->getG(), this->getB(), 1, 0, 0, 0).draw();
 			glPopMatrix();
 
 			glPushMatrix();
-				glTranslated(-(tailWidth+rotorWidth)/2, tailHeight/2, 0);
+				glTranslatef(-(tailWidth+rotorWidth)/2, tailHeight/2, 0);
 				Rectangle("chpRotor2", 0, 0, rotorWidth, rotorHeight, 
 						this->getR(), this->getG(), this->getB(), 1, 0, 0, 0).draw();
 			glPopMatrix();
 		glPopMatrix();
 
 		glPushMatrix();
-			glTranslated(0, -bodyHeight/2, 0);
-			glRotated(gunAngle, 0, 0, 1);
-			glTranslated(0, -gunHeight/2, 0);
+			glTranslatef(0, -bodyHeight/2, 0);
+			glRotatef(gunAngle, 0, 0, 1);
+			glTranslatef(0, -gunHeight/2, 0);
 
 			Rectangle("gun", 0, 0, gunWidth, gunHeight, 1, 1, 0, 1, 0, 0, 0).draw();
 		glPopMatrix();
 	glPopMatrix();
 
 	glPushMatrix();
-		glTranslated(x, y, 0);
+		glTranslatef(x, y, 0);
 
 		if(state)
 		{
@@ -252,7 +249,7 @@ void Chopper::draw()
 			hlxAngle += hlxSpeed;
 		}
 		
-		glRotated(hlxAngle, 0, 0, 1);
+		glRotatef(hlxAngle, 0, 0, 1);
 
 		Rectangle("helix1", 0, 0, helixWidth, helixHeigth, 0, 0, 1, 1, 0, 0, 0).draw();
 		Rectangle("helix2", 0, 0, helixHeigth, helixWidth, 0, 0, 1, 1, 0, 0, 0).draw();
@@ -295,10 +292,20 @@ void Chopper::changeState()
 
 void Chopper::refuel(double delta)
 {
-	// cout << fuel + delta << endl;
-	if(fuel + delta <= fuelMax)
-		this->fuel += delta;
-};
+	// cout << fuelTime + delta << " -> " << fuelTimeMax << endl;
+
+	if(fuelTime + delta <= fuelTimeMax)
+		this->fuelTime += delta;
+	else
+		this->fuelTime = fuelTimeMax;
+}
+
+void Chopper::useFuel(double timeDiff)
+{
+	// cout << timeDiff << endl;
+	if(this->state)
+		this->fuelTime -= timeDiff;
+}
 
 void Chopper::incRot()
 {
@@ -316,12 +323,12 @@ void Chopper::decRot()
 		hlxSpeed -= 2;
 }
 
-void Chopper::moveFoward()
+void Chopper::moveFoward(GLdouble timeDiff)
 {
 	if(state)
 	{
-		int dx = round(sin(yaw * M_PI / 180.0)*chpSpeed);
-		int dy = round(cos(yaw * M_PI / 180.0)*chpSpeed);
+		GLfloat dx = sin(yaw * M_PI / 180.0)*chpSpeed*timeDiff;
+		GLfloat dy = cos(yaw * M_PI / 180.0)*chpSpeed*timeDiff;
 
 		if(x + hitboxRad + dx > g_limitX || x - hitboxRad + dx < 0)
 			dx = 0;
@@ -331,16 +338,16 @@ void Chopper::moveFoward()
 
 		x += dx; y -= dy;
 
-		fuel -= 0.1;
+		// fuel -= 0.1;
 	}
 }
 
-void Chopper::moveBackward()
+void Chopper::moveBackward(GLdouble timeDiff)
 {
 	if(state)
 	{
-		int dx = round(sin(yaw * M_PI / 180.0)*chpSpeed);
-		int dy = round(cos(yaw * M_PI / 180.0)*chpSpeed);
+		GLfloat dx = sin(yaw * M_PI / 180.0)*chpSpeed*timeDiff;
+		GLfloat dy = cos(yaw * M_PI / 180.0)*chpSpeed*timeDiff;
 
 		if(x + hitboxRad - dx > g_limitX || x - hitboxRad - dx < 0)
 			dx = 0;
@@ -350,11 +357,11 @@ void Chopper::moveBackward()
 
 		x -= dx; y += dy;
 
-		fuel -= 0.1;
+		// fuel -= 0.1;
 	}
 }
 
-void Chopper::moveByIA()
+void Chopper::moveByIA(GLdouble timeDiff)
 {
 	if(this->intel)
 	{
@@ -363,30 +370,30 @@ void Chopper::moveByIA()
 			case STAY:
 				break;
 			case TURN_R:
-				this->pivot(this->chpSpeed);
+				this->pivot(this->chpSpeed, timeDiff);
 				break;
 			case TURN_L:
-				this->pivot(-this->chpSpeed);
+				this->pivot(-this->chpSpeed, timeDiff);
 				break;
 			case FOWARD:
-				this->moveFoward();
+				this->moveFoward(timeDiff);
 				break;
 			case TURNFWRD_L:
-				this->pivot(-this->chpSpeed);
-				this->moveFoward();
+				this->pivot(-this->chpSpeed, timeDiff);
+				this->moveFoward(timeDiff);
 			case TURNFWRD_R:
-				this->pivot(this->chpSpeed);
-				this->moveFoward();
+				this->pivot(this->chpSpeed, timeDiff);
+				this->moveFoward(timeDiff);
 				break;
 			case BACKWARD:
-				this->moveBackward();
+				this->moveBackward(timeDiff);
 				break;
 			case TURNBACK_L:
-				this->pivot(-this->chpSpeed);
-				this->moveBackward();
+				this->pivot(-this->chpSpeed, timeDiff);
+				this->moveBackward(timeDiff);
 			case TURNBACK_R:
-				this->pivot(this->chpSpeed);
-				this->moveBackward();
+				this->pivot(this->chpSpeed, timeDiff);
+				this->moveBackward(timeDiff);
 				break;
 			default:
 				break;
@@ -420,16 +427,16 @@ vec3 Chopper::getNextPosition(int direc)
 		}
 	}
 
-	int dx = round(sin(yaw * M_PI / 180.0)*chpSpeed);
-	int dy = round(cos(yaw * M_PI / 180.0)*chpSpeed);
+	GLfloat dx = sin(yaw * M_PI / 180.0)*chpSpeed;
+	GLfloat dy = cos(yaw * M_PI / 180.0)*chpSpeed;
 
 	return vec3(x + (direc) * dx, y - (direc) * dy, 0);
 }
 
-void Chopper::pivot(double dyaw)
+void Chopper::pivot(double dyaw, GLdouble timeDiff)
 {
 	if(state)
-		yaw += dyaw;			
+		yaw += dyaw*timeDiff;
 
 	if(yaw >= 360)
 		yaw -= 360;
@@ -437,7 +444,7 @@ void Chopper::pivot(double dyaw)
 	if(yaw < 0)
 		yaw += 360;
 
-	fuel -= 0.1;
+	// fuel -= 0.1;
 }
 
 void Chopper::moveGun(int x, int y)

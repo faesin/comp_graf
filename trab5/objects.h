@@ -36,8 +36,8 @@ public:
 	Object(const char* nid, double R = 0, double G = 0, double B = 0) : r(R), g(G), b(B) {id[0] = '\0'; strcat(id, nid);};
 	virtual ~Object() {};
 	virtual void draw() = 0;
-	virtual int getX() const = 0;
-	virtual int getY() const = 0;
+	virtual GLfloat getX() const = 0;
+	virtual GLfloat getY() const = 0;
 
 	void setColor(double r, double g, double b) { this->r = r; this->g = g; this->b = b; };
 	const char* getID() const { return this->id; };
@@ -52,58 +52,59 @@ protected:
 
 class Rectangle: public Object
 {
-	int x, y;
+	GLfloat x, y;
 	int width, height;
 	double strokeW;
 	double strR, strG, strB;
 public:
 
-	Rectangle(const char* id, int x, int y, int w, int h, double R, double G, double B, double sw, double sr, double sg, double sb):
+	Rectangle(const char* id, GLfloat x, GLfloat y, int w, int h, double R, double G, double B, double sw, double sr, double sg, double sb):
 		Object(id, R, G, B), x(x), y(y), width(w), height(h), strokeW(sw), strR(sr), strG(sg), strB(sb) {};
 
 	~Rectangle(){};
 
 	void draw();
 
-	int getX() const {return x;};
-	int getY() const {return y;};
+	GLfloat getX() const {return x;};
+	GLfloat getY() const {return y;};
 	int getWidth() const {return width;};
 	int getHeight() {return height;};
 };
 
 class Circle: public Object
 {
-	int x, y, radius;
+	GLfloat x, y, radius;
 public:
 
-	Circle(const char *id, int x, int y, int rad, double r, double g, double b):
+	Circle(const char *id, GLfloat x, GLfloat y, int rad, double r, double g, double b):
 		Object(id, r, g, b), x(x), y(y), radius(rad) {};
 
 	~Circle(){};
 
 	void draw();
 
-	int getX() const {return x;};
-	int getY() const {return y;};
+	GLfloat getX() const {return x;};
+	GLfloat getY() const {return y;};
 	int getRad() const {return radius;};
 };
 
 class Bullet: public Object
 {
-	int x, y, hitboxRad;
+	GLfloat x, y;
+	int hitboxRad;
 	double dir, speed;
 
 	char ownerID[256];
 
 public:
 
-	Bullet(const char *id, int x, int y, int rad, double d, double spd, const char* ownID):
+	Bullet(const char *id, GLfloat x, GLfloat y, int rad, double d, double spd, const char* ownID):
 		Object(id), x(x), y(y), hitboxRad(rad), dir(d), speed(spd) {ownerID[0] = '\0'; strcat(ownerID, ownID);};
 
 	~Bullet(){};
 
-	int getX() const { return x; };
-	int getY() const { return y; };
+	GLfloat getX() const { return x; };
+	GLfloat getY() const { return y; };
 	int getHitboxRad() const { return hitboxRad; };
 	char* getOwner() { return ownerID; };
 	
@@ -142,12 +143,13 @@ public:
 
 class Chopper: public Object
 {
-	int x, y, hitboxRad, gunx, guny;
+	GLfloat x, y, gunx, guny;
+	int hitboxRad;
 	double yaw, gunAngle, hlxSpeed, hlxAngle, chpSpeed, bltSpeed;
 
 	IA *intel;
 
-	double fuel, fuelMax;
+	double fuelTime, fuelTimeMax;
 
 	double mouseSens;
 	int mouseLastX;
@@ -166,26 +168,27 @@ class Chopper: public Object
 		helixHeigth;
 
 public:
-	Chopper(const char *id, int x, int y, int rad, int st, double spdC = 1, double spdB = 1.5,
-			double yaw = 0, double hSpeed = 10, double r = 0, double g = 1, double b = 0);
+	Chopper(const char *id, GLfloat x, GLfloat y, int rad, int st, double spdC = 1, double spdB = 1.5,
+			double yaw = 0, double hSpeed = 10, double fuel = 10, double r = 0, double g = 1, double b = 0);
 
 	~Chopper(){ delete intel; };
 
 	void draw();
 
-	int getX() const { return x; };
-	int getY() const { return y; };
-	int getYaw() const { return yaw; };
-	int getFuel() const { return fuel; };
+	GLfloat getX() const { return x; };
+	GLfloat getY() const { return y; };
+	double getYaw() const { return yaw; };
+	double getFuel() const { return fuelTime; };
 	int getHitboxRad() const { return hitboxRad; };
 	int getCurrInstr() const { return intel->getInstr(); };
 
-	void setX(int x){ this->x = x; };
-	void setY(int y){ this->y = y; };
+	void setX(GLfloat x){ this->x = x; };
+	void setY(GLfloat y){ this->y = y; };
 	void setIntel(IA *intel){ this->intel = intel; };
-	void setFuel(int f){ this->fuel = f; };
 	void refuel(double delta);
 	void setSeekDone(){ this->intel->setSeekDone(); };
+
+	void useFuel(double timeDiff);
 
 	double getTurnSpeed() const { return chpSpeed; };
 	void drawHbx(){ drawHitbox = !drawHitbox; };
@@ -197,13 +200,13 @@ public:
 	void incRot();
 	void decRot();
 	
-	void moveFoward();
-	void moveBackward();
-	void moveByIA();
+	void moveFoward(GLdouble timeDiff);
+	void moveBackward(GLdouble timeDiff);
+	void moveByIA(GLdouble timeDiff);
 
 	vec3 getNextPosition(int direc);
 
-	void pivot(double dyaw);
+	void pivot(double dyaw, GLdouble timeDiff);
 	void moveGun(int x, int y);
 	Bullet* shoot();
 };
