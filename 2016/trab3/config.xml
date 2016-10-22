@@ -1,0 +1,4 @@
+<aplicacao>
+	<arquivoDaArena nome="arena" tipo="svg" caminho="/home/rafael/repos/comp_graf/2016/trab3/"></arquivoDaArena>
+	<carro velTiro="0.2" velCarro="0.1"></carro>
+</aplicacao>
