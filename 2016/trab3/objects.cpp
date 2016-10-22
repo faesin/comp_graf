@@ -129,13 +129,31 @@ void Circle::draw()
 // 	this->fillChange = 1;
 // }
 
+/* ========================================================== */
+/* ========================= BULLET ========================= */
+/* ========================================================== */
+
+void Bullet::draw()
+{
+	glPushMatrix();
+		glTranslatef(x, y, 0);
+		Circle("bulit", 0, 0, hitboxRad, 0.15, 0.15, 0.15).draw();
+	glPopMatrix();
+}
+
+void Bullet::updatePosition(GLdouble timeDiff)
+{
+	x += sin(dir * M_PI / 180.0)*speed*timeDiff;
+	y += cos(dir * M_PI / 180.0)*speed*timeDiff;
+}
+
 /* =========================================================== */
 /* =========================== Car =========================== */
 /* =========================================================== */
 
 
-Car::Car(const char *id, int x, int y, int rad, double yaw, double spd, double r, double g, double b) :
-	Object(id, r, g, b), x(x), y(y), hitboxRad(rad), yaw(yaw), carSpeed(spd)
+Car::Car(const char *id, int x, int y, int rad, double yaw, double cSpd, double bSpd, double r, double g, double b) :
+	Object(id, r, g, b), x(x), y(y), hitboxRad(rad), yaw(yaw), carSpeed(cSpd), bulletSpeed(bSpd)
 {
 	wheelYaw = 0;
 
@@ -145,6 +163,14 @@ Car::Car(const char *id, int x, int y, int rad, double yaw, double spd, double r
 	suspWidth = rad * 0.25;
 	wheelHeight = rad * 0.33;
 	wheelWidth = rad * 0.25;
+
+	cannonHeight = rad * 0.3;
+	cannonWidth = rad * 0.1;
+
+	mouseSens = 0.5;
+
+	cX = x + sin(yaw*M_PI/180) * bodyWidth/2;
+	cY = y + cos(yaw*M_PI/180) * bodyHeight/2;
 }
 
 void Car::draw()
@@ -161,7 +187,7 @@ void Car::draw()
 	
 			glTranslated(suspWidth/2 + wheelWidth/2, 0, 0);
 			glRotated(wheelYaw, 0, 0, 1);
-			Rectangle("wheelFrontRight", 0, 0, wheelWidth, wheelHeight, getR(), getG(), getB()).draw();
+			Rectangle("wheelFrontRight", 0, 0, wheelWidth, wheelHeight, getR()*0.3, getG()*0.3, getB()*0.3).draw();
 		glPopMatrix();
 
 		glPushMatrix();
@@ -170,7 +196,7 @@ void Car::draw()
 	
 			glTranslated(-suspWidth/2 - wheelWidth/2, 0, 0);
 			glRotated(wheelYaw, 0, 0, 1);
-			Rectangle("wheelFrontLeft", 0, 0, wheelWidth, wheelHeight, getR(), getG(), getB()).draw();
+			Rectangle("wheelFrontLeft", 0, 0, wheelWidth, wheelHeight, getR()*0.3, getG()*0.3, getB()*0.3).draw();
 		glPopMatrix();
 
 		glPushMatrix();
@@ -178,7 +204,7 @@ void Car::draw()
 			Rectangle("suspBackRight", 0, 0, suspWidth, suspHeight, getR()*0.5, getG()*0.5, getB()*0.5).draw();
 	
 			glTranslated(suspWidth/2 + wheelWidth/2, 0, 0);
-			Rectangle("wheelBackRight", 0, 0, wheelWidth, wheelHeight, getR(), getG(), getB()).draw();
+			Rectangle("wheelBackRight", 0, 0, wheelWidth, wheelHeight, getR()*0.3, getG()*0.3, getB()*0.3).draw();
 		glPopMatrix();
 
 		glPushMatrix();
@@ -186,7 +212,14 @@ void Car::draw()
 			Rectangle("suspBackLeft", 0, 0, suspWidth, suspHeight, getR()*0.5, getG()*0.5, getB()*0.5).draw();
 	
 			glTranslated(-suspWidth/2 - wheelWidth/2, 0, 0);
-			Rectangle("wheelBackLeft", 0, 0, wheelWidth, wheelHeight, getR(), getG(), getB()).draw();
+			Rectangle("wheelBackLeft", 0, 0, wheelWidth, wheelHeight, getR()*0.3, getG()*0.3, getB()*0.3).draw();
+		glPopMatrix();
+
+		glPushMatrix();
+			glTranslated(0, bodyHeight/2, 0);
+			glRotated(-cannonYaw, 0, 0, 1);
+			glTranslated(0, cannonHeight/2, 0);
+			Rectangle("cannon", 0, 0, cannonWidth, cannonHeight, getR()*0.1, getG()*0.1, getB()*0.1).draw();
 		glPopMatrix();
 	glPopMatrix();
 }
@@ -194,37 +227,70 @@ void Car::draw()
 
 void Car::moveFoward(GLdouble timeDiff)
 {
-	int dx = round(sin(yaw * M_PI / 180.0)*carSpeed*timeDiff);
-	int dy = round(cos(yaw * M_PI / 180.0)*carSpeed*timeDiff);
+	double dx = sin(yaw * M_PI / 180.0)*carSpeed*timeDiff;
+	double dy = cos(yaw * M_PI / 180.0)*carSpeed*timeDiff;
 
-	x += dx; y += dy;
+	//From https://www.ri.cmu.edu/pub_files/2009/2/Automatic_Steering_Methods_for_Autonomous_Automobile_Path_Tracking.pdf
+	// double turningRadius = (double)bodyHeight/tan(wheelYaw);
+	// double lambda = atan2((double)bodyHeight, turningRadius);
+	// double tetha = carSpeed * timeDiff * tan(lambda)/turningRadius;
+	
+	// double	dx = carSpeed * timeDiff * sin(tetha),
+	// 		dy = carSpeed * timeDiff * cos(tetha);
+
+	x -= dx; y += dy;
+
+	cX = x + sin(yaw*M_PI/180) * bodyWidth/2;
+	cY = y + cos(yaw*M_PI/180) * bodyHeight/2;
 }
 
 void Car::moveBackward(GLdouble timeDiff)
 {
-	int dx = round(sin(yaw * M_PI / 180.0)*carSpeed*timeDiff);
-	int dy = round(cos(yaw * M_PI / 180.0)*carSpeed*timeDiff);
+	double dx = sin(yaw * M_PI / 180.0)*carSpeed*timeDiff;
+	double dy = cos(yaw * M_PI / 180.0)*carSpeed*timeDiff;
 
 	x -= dx; y -= dy;
+
+	cX = x + sin(yaw*M_PI/180) * bodyWidth/2;
+	cY = y + cos(yaw*M_PI/180) * bodyHeight/2;
 }
 
 
 vec3 Car::getNextPosition(int direc, GLdouble timeDiff)
 {
-	int dx = round(sin(yaw * M_PI / 180.0)*carSpeed);
-	int dy = round(cos(yaw * M_PI / 180.0)*carSpeed);
+	double dx = sin(yaw * M_PI / 180.0)*carSpeed*timeDiff;
+	double dy = cos(yaw * M_PI / 180.0)*carSpeed*timeDiff;
 
-	return vec3(x + (direc) * dx, y - (direc) * dy, 0);
+	return vec3(x + (direc) * dx, y + (direc) * dy, 0);
 }
 
 void Car::moveWheels(double dyaw, GLdouble timeDiff)
 {
-	// yaw += dyaw * timeDiff;	
-	wheelYaw += dyaw * timeDiff;	
+	// yaw += dyaw * timeDiff;
+	wheelYaw += dyaw * timeDiff;
 
-	// if(yaw >= 360)
-	// 	yaw -= 360;
+	if(wheelYaw >= 22.5)
+		wheelYaw = 22.5;
 
-	// if(yaw < 0)
-	// 	yaw += 360;
+	if(wheelYaw <= -22.5)
+		wheelYaw = -22.5;
+}
+
+void Car::moveCannon(int x, int y)
+{
+	int mouseMovedX = x - mouseLastX;
+
+	cannonYaw += mouseMovedX*mouseSens;
+	if(cannonYaw > 45)
+		cannonYaw = 45;
+
+	if(cannonYaw < -45)
+		cannonYaw = -45;
+
+	mouseLastX = x;
+}
+
+Bullet* Car::shoot()
+{
+	return new Bullet("pewpew", cX, cY, cannonWidth, cannonYaw + yaw, bulletSpeed, this->getID());
 }

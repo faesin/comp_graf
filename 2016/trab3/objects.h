@@ -92,15 +92,39 @@ public:
 	double getRadius() const {return radius;};
 };
 
+class Bullet: public Object
+{
+	double x, y, hitboxRad, dir, speed;
+	char ownerID[256];
+
+public:
+
+	Bullet(const char *id, double x, double y, double rad, double d, double spd, const char* ownID):
+		Object(id), x(x), y(y), hitboxRad(rad), dir(d), speed(spd) {ownerID[0] = '\0'; strcat(ownerID, ownID);};
+
+	~Bullet(){};
+
+	double getX() const { return x; };
+	double getY() const { return y; };
+	int getHitboxRad() const { return hitboxRad; };
+	char* getOwner() { return ownerID; };
+	
+	void draw();
+	void updatePosition(double timeDiff);
+};
+
 class Car: public Object
 {
 	double x, y, hitboxRad, yaw, carSpeed,
 			bodyHeight, bodyWidth,
 			suspHeight, suspWidth,
 			wheelHeight, wheelWidth, wheelYaw,
-			cannonHeight, cannonWidth, cannonYaw;
+			cannonHeight, cannonWidth, cannonYaw, cX, cY,
+			bulletSpeed;
+
+	double mouseSens, mouseLastX;
 public:
-	Car(const char *id, int x, int y, int rad, double yaw = 0, double spdC = 1,
+	Car(const char *id, int x, int y, int rad, double yaw = 0, double cSpd = 1, double bSpd = 0.5,
 		 double r = 0, double g = 1, double b = 0);
 
 	~Car(){};
@@ -126,6 +150,9 @@ public:
 	void moveFoward(GLdouble);
 	void moveBackward(GLdouble);
 	void moveWheels(double dyaw, GLdouble);
+	void moveCannon(int, int);
+
+	Bullet* shoot();
 
 	vec3 getNextPosition(int direc, GLdouble);
 };
