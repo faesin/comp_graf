@@ -71,7 +71,7 @@ void idleCallback()
 	if(keyStatus[(int)'s'] == 1)
 	{	
 		// vec3 aux(g_player->getX(), g_player->getY() - g_player->getSpeed(), 0);
-		if(!checkPlayerCollision(g_player->getNextPosition(1, timeDiff)))
+		if(!checkPlayerCollision(g_player->getNextPosition(-1, timeDiff)))
 			g_player->moveBackward(timeDiff);
 	}
 

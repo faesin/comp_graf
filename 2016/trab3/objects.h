@@ -58,6 +58,22 @@ protected:
 	double r, g, b;
 };
 
+class Line: public Object
+{
+	double x, y, width;
+public:
+	Line(const char* id, int x, int y, int w, double R, double G, double B):
+		Object(id, R, G, B), x(x), y(y), width(w) {};
+
+	~Line(){};
+
+	void draw();
+
+	double getX() const {return x;};
+	double getY() const {return y;};
+	double getWidth() const {return width;};
+};
+
 class Rectangle: public Object
 {
 	double x, y, width, height;
@@ -119,8 +135,11 @@ class Car: public Object
 			bodyHeight, bodyWidth,
 			suspHeight, suspWidth,
 			wheelHeight, wheelWidth, wheelYaw,
+			wheelTrackHeight, wheelTrackWidth, trackDelta,
 			cannonHeight, cannonWidth, cannonYaw, cX, cY,
 			bulletSpeed;
+
+	int handling;
 
 	double mouseSens, mouseLastX;
 public:
