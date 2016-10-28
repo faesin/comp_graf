@@ -172,7 +172,7 @@ int main(int argc, char **argv)
 	glutDisplayFunc(displayCallback);
 	glutReshapeFunc(reshapeCallback);
 	glutMouseFunc(mouseCallback);
-	glutMotionFunc(mouseMoveCallback);
+	glutPassiveMotionFunc(mouseMoveCallback);
 	glutKeyboardFunc(keyDownCallback);
 	glutKeyboardUpFunc(keyUpCallback);
 
