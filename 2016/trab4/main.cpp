@@ -38,6 +38,8 @@ int laps = 0;
 int keyStatus[256];
 int g_winCond = 0;
 
+double elapsedTime = 0;
+
 int openFile(int argc, char **argv);
 
 bool checkPlayerCollision(vec3 nextPos);
@@ -138,6 +140,7 @@ void reshapeCallback(int w, int h)
 
 void mouseCallback(int button, int state, int x, int y)
 {
+	//cout << "x: " << x << "\ty:" << y << endl;
 	if(button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
 	{
 		Bullet *aux = g_player->shoot();
@@ -342,7 +345,13 @@ int openFile(int argc, char **argv)
 
 				if(strstr(color, "red") != NULL)
 				{
-					g_cars.push_back(new Car(id, x, y, radius, 0, g_enCarSpeed, g_enBulletSpeed, 1, 0, 0));
+					double	dx = g_arena[0]->getX() - x,
+							dy = g_arena[0]->getY() - y,
+							yaw = 0;
+
+					yaw = atan2(dx,dy) * 180.0/M_PI;
+					//cout << yaw << endl;
+					g_cars.push_back(new Car(id, x, y, radius, 270 - yaw, g_enCarSpeed, g_enBulletSpeed, 1, 0, 0));
 					// g_objects.push_back(new Circle(id, x, y, radius, 1, 0, 0));
 				}else{
 
@@ -415,33 +424,38 @@ bool checkPlayerCollision(vec3 nextPos)
 
 void checkLaps()
 {
-
-	//If he was inside and got out on the bottom, minus a lap
-	if(inStart)
-	{
-		double dy = g_start->getY() - g_player->getY();
-		// cout << dy << endl;
-		if(dy > g_player->getHitboxRadius() + g_start->getHeight()/2)
-		{
-			laps--;
-			cout << "Laps = " << laps << endl;
-		}
-	}else{
-		//if was outside and got in tru bottom, plus a lap
-		//TODO:: Fix here
-		double dy = g_start->getY() - g_player->getY();
-		if(dy <= g_player->getHitboxRadius() + g_start->getHeight()/2)
-		{
-			laps++;
-			cout << "Laps = " << laps << endl;
-		}
-	}
-
+	bool lastStatus = inStart;
 	inStart = (g_player->getX() > g_start->getX() - g_start->getWidth()/2)
 		&& (g_player->getX() < g_start->getX() + g_start->getWidth()/2)
 		&& (g_player->getY() >= g_start->getY() - g_start->getHeight()/2)
 		&& (g_player->getY() <= g_start->getY() + g_start->getHeight()/2);
 
+	//If he was inside and got out on the bottom, minus a lap
+	if(lastStatus && !inStart)
+	{
+		double dy = g_start->getY() - g_player->getY();
+		//cout << "From inside dy: " << dy << " distance from start center: " << g_player->getHitboxRadius() + g_start->getHeight()/2 << endl;
+		if(dy > 0 && dy >= g_start->getHeight()/2)
+		{
+			cout << "got out thru bottom" << endl; 
+			laps--;
+			cout << "Laps = " << laps << endl;
+		}
+	}
+
+	if(!lastStatus && inStart)
+	{
+		//if was outside and got in tru bottom, plus a lap
+		double dy = g_start->getY() - g_player->getY();
+		//cout << "From outside dy: " << dy << endl;
+		if(dy > 0 && dy <= g_player->getHitboxRadius() + g_start->getHeight()/2)
+		{
+			cout << "got in thru bottom" << endl; 
+			laps++;
+			cout << "Laps = " << laps << endl;
+		}
+	}
+	
 }
 
 void makeBulletColision(GLdouble timeDiff)

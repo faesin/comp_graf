@@ -19,16 +19,13 @@ using namespace std;
 
 typedef unsigned int uint;
 typedef enum {
-	STAY = 0,
-	FOWARD = 1,
-	BACKWARD = 2,
-	TURN_R = 3,
-	TURN_L = 4,
-	TURNFWRD_R = 5,
-	TURNFWRD_L = 6,
-	TURNBACK_R = 7,
-	TURNBACK_L = 8,
-	SEEK = 9
+	FOWARD = 0,
+	BACKWARD,
+	TURNFWRD_R,
+	TURNFWRD_L,
+	TURNBACK_R,
+	TURNBACK_L,
+	SHOOT
 } instr_t;
 
 typedef enum dir {

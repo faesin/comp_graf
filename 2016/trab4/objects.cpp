@@ -108,47 +108,42 @@ void Circle::draw()
 /* =========================== IA =========================== */
 /* ========================================================== */
 
-// random_device IA::rd;
-// mt19937 IA::eng;
+random_device IA::rd;
+mt19937 IA::eng;
 
-// IA::IA(double spm){
+IA::IA(double spm){
 
-// 	IA::eng = mt19937(IA::rd());
-// 	this->shootsPerMilli = spm;
-// 	this->changeMove = spm*5;
-// 	this->lastTime = getCurrentTimeMS();
-// 	// cout << seekTimer << " " << instrTimer << endl;
+	IA::eng = mt19937(IA::rd());
+ 	this->shootsPerMilli = spm;
+	this->changeMove = spm*5;
+	this->lastTime = getCurrentTimeMS();
+	// cout << seekTimer << " " << instrTimer << endl;
 	
-// 	uniform_int_distribution<> distr(0, 8);
-// 	this->current_instr = static_cast<instr_t>(distr(IA::eng));
-// }
+	uniform_int_distribution<> distr(0, 8);
+	this->current_instr = static_cast<instr_t>(distr(IA::eng));
+}
 
-// void IA::doStep()
-// {
-// 	long long now = getCurrentTimeMS();
-// 	fillShoot += (double)(now - this->lastTime) * shootsPerMilli;
+void IA::doStep()
+{
+	long long now = getCurrentTimeMS();
+	fillShoot += (double)(now - this->lastTime) * shootsPerMilli;
 
-// 	if(fillShoot >= 1)
-// 	{
-// 		this->current_instr = SEEK;
-// 	}else{
-// 		fillChange += (now - this->lastTime) * changeMove;
-// 		if(fillChange >= 1)
-// 		{
-// 			uniform_int_distribution<> distr(0, 8);
-// 			this->current_instr = static_cast<instr_t>(distr(IA::eng));
-// 			fillChange = 0;
-// 		}
-// 	}
+ 	if(fillShoot >= 1)
+	{
+		this->current_instr = SHOOT;
+	}else{
+		fillChange += (now - this->lastTime) * changeMove;
+		if(fillChange >= 1)
+		{
+			uniform_int_distribution<> distr(0, 8);
+			this->current_instr = static_cast<instr_t>(distr(IA::eng));
+			fillChange = 0;
+		}
+	}
 	
-// 	this->lastTime = now;
-// }
+	this->lastTime = now;
+}
 
-// void IA::setSeekDone()
-// {
-// 	this->fillShoot = 0;
-// 	this->fillChange = 1;
-// }
 
 /* ========================================================== */
 /* ========================= BULLET ========================= */
