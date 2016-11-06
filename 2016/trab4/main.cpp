@@ -20,7 +20,7 @@ GLfloat g_windowBG_R = 1.0, g_windowBG_G = 1.0, g_windowBG_B = 1.0;
 char g_windowTitle[] = "trabalhocg";
 
 vector<Circle*> g_arena;
-Object* g_start;
+Rectangle* g_start;
 
 vector<Object*> g_objects;
 vector<Car*> g_cars;
@@ -32,6 +32,9 @@ float	g_carSpeed = 0, g_bulletSpeed = 0,
 		g_enCarSpeed = 0, g_enBulletSpeed = 0,
 		g_enShootFreq = 0;
 
+bool inStart = true;
+int laps = 0;
+
 int keyStatus[256];
 int g_winCond = 0;
 
@@ -39,6 +42,7 @@ int openFile(int argc, char **argv);
 
 bool checkPlayerCollision(vec3 nextPos);
 void makeBulletColision(GLdouble timeDiff);
+void checkLaps();
 
 void keyDownCallback(unsigned char key, int x, int y)
 {
@@ -99,6 +103,7 @@ void idleCallback()
 		g_bullets[i]->updatePosition(timeDiff);
 
 	makeBulletColision(timeDiff);
+	checkLaps();
 
 	glutPostRedisplay();
 }
@@ -408,6 +413,37 @@ bool checkPlayerCollision(vec3 nextPos)
 	return false;
 }
 
+void checkLaps()
+{
+
+	//If he was inside and got out on the bottom, minus a lap
+	if(inStart)
+	{
+		double dy = g_start->getY() - g_player->getY();
+		// cout << dy << endl;
+		if(dy > g_player->getHitboxRadius() + g_start->getHeight()/2)
+		{
+			laps--;
+			cout << "Laps = " << laps << endl;
+		}
+	}else{
+		//if was outside and got in tru bottom, plus a lap
+		//TODO:: Fix here
+		double dy = g_start->getY() - g_player->getY();
+		if(dy <= g_player->getHitboxRadius() + g_start->getHeight()/2)
+		{
+			laps++;
+			cout << "Laps = " << laps << endl;
+		}
+	}
+
+	inStart = (g_player->getX() > g_start->getX() - g_start->getWidth()/2)
+		&& (g_player->getX() < g_start->getX() + g_start->getWidth()/2)
+		&& (g_player->getY() >= g_start->getY() - g_start->getHeight()/2)
+		&& (g_player->getY() <= g_start->getY() + g_start->getHeight()/2);
+
+}
+
 void makeBulletColision(GLdouble timeDiff)
 {
 	vector<Bullet*>::iterator bIt;
@@ -420,8 +456,8 @@ void makeBulletColision(GLdouble timeDiff)
 			vector<Car*>::iterator cIt;
 			for(cIt = g_cars.begin(); cIt != g_cars.end(); ++cIt)
 			{
-				int dx = (*cIt)->getX() - (*bIt)->getX();
-				int dy = (*cIt)->getY() - (*bIt)->getY();
+				double dx = (*cIt)->getX() - (*bIt)->getX();
+				double dy = (*cIt)->getY() - (*bIt)->getY();
 
 				double dist = sqrt(dx * dx + dy * dy);
 
@@ -440,8 +476,8 @@ void makeBulletColision(GLdouble timeDiff)
 				}
 			}
 		}else{
-			int dx = g_player->getX() - (*bIt)->getX();
-			int dy = g_player->getY() - (*bIt)->getY();
+			double dx = g_player->getX() - (*bIt)->getX();
+			double dy = g_player->getY() - (*bIt)->getY();
 
 			double dist = sqrt(dx * dx + dy * dy);
 
