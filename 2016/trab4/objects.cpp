@@ -103,48 +103,6 @@ void Circle::draw()
 	glPopMatrix();
 }
 
-
-/* ========================================================== */
-/* =========================== IA =========================== */
-/* ========================================================== */
-
-random_device IA::rd;
-mt19937 IA::eng;
-
-IA::IA(double spm){
-
-	IA::eng = mt19937(IA::rd());
- 	this->shootsPerMilli = spm;
-	this->changeMove = spm*5;
-	this->lastTime = getCurrentTimeMS();
-	// cout << seekTimer << " " << instrTimer << endl;
-	
-	uniform_int_distribution<> distr(0, 8);
-	this->current_instr = static_cast<instr_t>(distr(IA::eng));
-}
-
-void IA::doStep()
-{
-	long long now = getCurrentTimeMS();
-	fillShoot += (double)(now - this->lastTime) * shootsPerMilli;
-
- 	if(fillShoot >= 1)
-	{
-		this->current_instr = SHOOT;
-	}else{
-		fillChange += (now - this->lastTime) * changeMove;
-		if(fillChange >= 1)
-		{
-			uniform_int_distribution<> distr(0, 8);
-			this->current_instr = static_cast<instr_t>(distr(IA::eng));
-			fillChange = 0;
-		}
-	}
-	
-	this->lastTime = now;
-}
-
-
 /* ========================================================== */
 /* ========================= BULLET ========================= */
 /* ========================================================== */
@@ -188,10 +146,11 @@ Car::Car(const char *id, int x, int y, int rad, double yaw, double cSpd, double 
 
 	mouseSens = 0.5;
 
-	cX = x;
-	cY = y + bodyHeight/2;
+	cX = x - sin(yaw*M_PI/180) * bodyHeight/2;
+	cY = y + cos(yaw*M_PI/180) * bodyHeight/2;
 
 	trackDelta = 0;
+	intel = NULL;
 }
 
 void Car::draw()
@@ -375,3 +334,4 @@ Bullet* Car::shoot()
 {
 	return new Bullet("pewpew", cX, cY, cannonWidth, yaw - cannonYaw , bulletSpeed, this->getID());
 }
+

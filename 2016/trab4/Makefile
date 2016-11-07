@@ -1,8 +1,8 @@
 CC=g++
-CFLAGS= -c -Wall
+CFLAGS= -c -Wall -std=c++11
 LFLAGS= -lGL -lglut
 EXEC=trabalhocg
-SRCS=tinyxml2.cpp objects.cpp main.cpp
+SRCS=tinyxml2.cpp botia.cpp objects.cpp main.cpp
 OBJ=$(SRCS:.cpp=.o)
 
 .PHONY: clean

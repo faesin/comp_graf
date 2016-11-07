@@ -1,6 +1,7 @@
 #include <iostream>
 #include <sstream>
 #include <stdio.h>
+#include <stdlib.h>
 #include <vector>
 #include <cstring>
 #include <map>
@@ -38,17 +39,27 @@ int laps = 0;
 int keyStatus[256];
 int g_winCond = 0;
 
-double elapsedTime = 0;
+bool gameStart = false, initialized = false;
+
+double elapsedTime = 0; //In millisec
+
+char g_winMsg[10] = "GANHOU!"; 
+char g_loseMsg[10] = "PERDEU!"; 
 
 int openFile(int argc, char **argv);
 
 bool checkPlayerCollision(vec3 nextPos);
+bool checkBotCollision(uint index, vec3 nextPos);
 void makeBulletColision(GLdouble timeDiff);
 void checkLaps();
+void renderBitmapString(int x, int y, void *font, char *string);
 
 void keyDownCallback(unsigned char key, int x, int y)
 {
 	keyStatus[(int)key] = 1;
+
+	if(!gameStart)
+		gameStart = !gameStart;
 
 	if(keyStatus[27] == 1)
 		exit(0);
@@ -62,14 +73,38 @@ void keyUpCallback(unsigned char key, int x, int y)
 	glutPostRedisplay();
 }
 
+void dumbIdleCallback()
+{
+}
+
 void idleCallback()
 {
+	if(gameStart && !initialized)
+	{
+		for(uint i = 0; i < g_cars.size(); ++i)
+			g_cars[i]->startIA();
+
+		initialized = true;
+	}
+
 	static GLdouble previousTime = 0;
 
 	GLdouble currentTime, timeDiff;
 	currentTime = glutGet(GLUT_ELAPSED_TIME);
 	timeDiff = currentTime - previousTime;
 	previousTime = currentTime;
+
+	if(gameStart)
+		elapsedTime += timeDiff;
+
+	if(g_winCond == -1)
+		glutIdleFunc(dumbIdleCallback);
+
+	if(laps >= 1)
+	{
+		g_winCond = 1;
+		glutIdleFunc(dumbIdleCallback);
+	}	
 
 	if(keyStatus[(int)'w'] == 1)
 	{
@@ -104,6 +139,56 @@ void idleCallback()
 	for(uint i = 0; i < g_bullets.size(); ++i)
 		g_bullets[i]->updatePosition(timeDiff);
 
+	for(uint i = 0; i < g_cars.size(); ++i)
+	{
+		g_cars[i]->think(timeDiff);
+		int nInstr = g_cars[i]->getNextInstr();
+		cout << nInstr << endl;
+		switch(nInstr)
+		{
+			case SHOOT:
+			{
+				Bullet *aux = g_cars[i]->shoot();
+				g_bullets.push_back(aux);
+				break;
+			}
+			case FORWARD:
+			{
+				if(!checkBotCollision(i, g_cars[i]->getNextPosition(1, timeDiff)))
+				{
+					g_cars[i]->moveFoward(timeDiff);
+					//TODO:: If it collides?
+				}
+				break;
+			}
+			case TURNFWRD_R:
+			{
+				g_cars[i]->moveWheels(-g_cars[i]->getSpeed(), timeDiff);
+				//if(g_cars[i]->getWheelYaw() < -2)
+				//	g_cars[i]->setWheelYaw(-2);
+				if(g_cars[i]->getWheelYaw() < 5)
+					g_cars[i]->setWheelYaw(5);
+
+
+				if(!checkBotCollision(i, g_cars[i]->getNextPosition(1, timeDiff)))
+					g_cars[i]->moveFoward(timeDiff);
+
+				break;
+			}
+			case TURNFWRD_L:
+			{
+				g_cars[i]->moveWheels(g_cars[i]->getSpeed(), timeDiff);
+				if(g_cars[i]->getWheelYaw() > 9)
+					g_cars[i]->setWheelYaw(9);
+
+				if(!checkBotCollision(i, g_cars[i]->getNextPosition(1, timeDiff)))
+					g_cars[i]->moveFoward(timeDiff);
+
+				break;
+			}	
+		}
+	}
+
 	makeBulletColision(timeDiff);
 	checkLaps();
 
@@ -129,6 +214,20 @@ void displayCallback(void)
 
 	for(uint i = 0; i < g_bullets.size(); ++i)
 		g_bullets[i]->draw();
+
+	char buffer[256];
+	sprintf(buffer, "%d", (int)elapsedTime/1000);
+	renderBitmapString(g_orthoX.second - 25, g_orthoY.second - 15, GLUT_BITMAP_9_BY_15, buffer);
+	
+	switch(g_winCond)
+	{
+		case 1:
+			renderBitmapString((g_orthoX.second - g_orthoX.first)/2, (g_orthoY.second - g_orthoY.first)/2, GLUT_BITMAP_9_BY_15, g_winMsg);
+			break;
+		case -1:
+			renderBitmapString((g_orthoX.second - g_orthoX.first)/2, (g_orthoY.second - g_orthoY.first)/2, GLUT_BITMAP_9_BY_15, g_loseMsg);
+			break;
+	}
 
 	glutSwapBuffers();
 }
@@ -229,7 +328,7 @@ int openFile(int argc, char **argv)
 	arenaPath = arenaFileElement->Attribute("caminho");
 	if(!arenaPath)
 	{
-		cout << "Could not find arena file path. Exiting..." << endl;
+		cerr << "Could not find arena file path. Exiting..." << endl;
 		return -1;
 	}
 
@@ -254,7 +353,7 @@ int openFile(int argc, char **argv)
 	XMLElement *carInfoElement = cfg.FirstChildElement()->FirstChildElement("carro");
 	if(!carInfoElement)
 	{
-		cout << "Could not find attribute: \"carro\". Exiting..." << endl;
+		cerr << "Could not find attribute: \"carro\". Exiting..." << endl;
 		return -1;
 	}
 	carInfoElement->QueryFloatAttribute("velTiro", &g_bulletSpeed);
@@ -263,7 +362,7 @@ int openFile(int argc, char **argv)
 	XMLElement *enemyInfoElement = cfg.FirstChildElement()->FirstChildElement("carroInimigo");
 	if(!carInfoElement)
 	{
-		cout << "Could not find attribute: \"carroInimigo\". Exiting..." << endl;
+		cerr << "Could not find attribute: \"carroInimigo\". Exiting..." << endl;
 		return -1;
 	}
 	enemyInfoElement->QueryFloatAttribute("velTiro", &g_enBulletSpeed);
@@ -351,7 +450,11 @@ int openFile(int argc, char **argv)
 
 					yaw = atan2(dx,dy) * 180.0/M_PI;
 					//cout << yaw << endl;
-					g_cars.push_back(new Car(id, x, y, radius, 270 - yaw, g_enCarSpeed, g_enBulletSpeed, 1, 0, 0));
+					Car* enemy = new Car(id, x, y, radius, 270 - yaw, g_enCarSpeed, g_enBulletSpeed, 1, 0, 0);
+					enemy->setIA(new IA(g_enShootFreq));
+					enemy->setWheelYaw(7);
+					
+					g_cars.push_back(enemy);
 					// g_objects.push_back(new Circle(id, x, y, radius, 1, 0, 0));
 				}else{
 
@@ -422,6 +525,56 @@ bool checkPlayerCollision(vec3 nextPos)
 	return false;
 }
 
+bool checkBotCollision(uint index, vec3 nextPos)
+{
+	double maxRadius, minRadius;
+
+	maxRadius = g_arena[0]->getRadius();
+	if(g_arena[0]->getRadius() > g_arena[1]->getRadius())
+	{
+		maxRadius = g_arena[0]->getRadius();
+		minRadius = g_arena[1]->getRadius();
+	}else{
+		minRadius = g_arena[0]->getRadius();
+		maxRadius = g_arena[1]->getRadius();
+	}
+
+	double dx = g_arena[0]->getX() - nextPos.x;
+	double dy = g_arena[0]->getY() - nextPos.y;
+	
+	double dist = sqrt(dx * dx + dy * dy);
+	if((dist <= minRadius + g_cars[index]->getHitboxRadius()) || (dist >= maxRadius - g_cars[index]->getHitboxRadius()))
+		return true;
+
+
+	dx = g_player->getX() - nextPos.x;
+	dy = g_player->getY() - nextPos.y;
+
+	dist = sqrt(dx * dx + dy * dy);
+	if(dist <= g_cars[index]->getHitboxRadius() + g_player->getHitboxRadius())
+			return true;
+
+	for(uint i = 0; i < g_cars.size(); ++i)
+	{
+		// Car *aux = dynamic_cast<Car*>(g_cars[i]);
+		// Circle *aux = dynamic_cast<Circle*>(g_objects[i]);
+		if(i == index)
+			continue;
+
+		if(g_cars[i] != NULL)
+		{
+			dx = g_cars[i]->getX() - nextPos.x;
+			dy = g_cars[i]->getY() - nextPos.y;
+
+			dist = sqrt(dx * dx + dy * dy);
+			if(dist <= g_cars[i]->getHitboxRadius() + g_cars[index]->getHitboxRadius())
+				return true;
+		}
+	}
+
+	return false;
+}
+
 void checkLaps()
 {
 	bool lastStatus = inStart;
@@ -437,9 +590,9 @@ void checkLaps()
 		//cout << "From inside dy: " << dy << " distance from start center: " << g_player->getHitboxRadius() + g_start->getHeight()/2 << endl;
 		if(dy > 0 && dy >= g_start->getHeight()/2)
 		{
-			cout << "got out thru bottom" << endl; 
+			//cout << "got out thru bottom" << endl; 
 			laps--;
-			cout << "Laps = " << laps << endl;
+			//cout << "Laps = " << laps << endl;
 		}
 	}
 
@@ -450,9 +603,9 @@ void checkLaps()
 		//cout << "From outside dy: " << dy << endl;
 		if(dy > 0 && dy <= g_player->getHitboxRadius() + g_start->getHeight()/2)
 		{
-			cout << "got in thru bottom" << endl; 
+			//cout << "got in thru bottom" << endl; 
 			laps++;
-			cout << "Laps = " << laps << endl;
+			//cout << "Laps = " << laps << endl;
 		}
 	}
 	
@@ -520,3 +673,15 @@ void makeBulletColision(GLdouble timeDiff)
 			++bIt;
 	}
 }
+
+void renderBitmapString(int x, int y, void *font, char *string)
+{
+	glColor3f(0, 0, 0);
+	char *c;
+	glRasterPos2f(x, y);
+	for(c = string; *c != '\0'; c++)
+	{
+		glutBitmapCharacter(font, *c);
+	}
+}
+

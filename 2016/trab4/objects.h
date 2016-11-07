@@ -11,6 +11,7 @@
 
 #include <GL/glut.h>
 #include "vec3.h"
+#include "botia.h"
 
 #include <math.h>
 #define _USE_MATH_DEFINES
@@ -18,16 +19,6 @@
 using namespace std;
 
 typedef unsigned int uint;
-typedef enum {
-	FOWARD = 0,
-	BACKWARD,
-	TURNFWRD_R,
-	TURNFWRD_L,
-	TURNBACK_R,
-	TURNBACK_L,
-	SHOOT
-} instr_t;
-
 typedef enum dir {
 	UP = 0,
 	DOWN,
@@ -40,6 +31,7 @@ class Object
 public:
 	Object(const char* nid, double R = 0, double G = 0, double B = 0) : r(R), g(G), b(B) {id[0] = '\0'; strcat(id, nid);};
 	virtual ~Object() {};
+
 	virtual void draw() = 0;
 	virtual double getX() const = 0;
 	virtual double getY() const = 0;
@@ -61,7 +53,6 @@ class Line: public Object
 public:
 	Line(const char* id, int x, int y, int w, double R, double G, double B):
 		Object(id, R, G, B), x(x), y(y), width(w) {};
-
 	~Line(){};
 
 	void draw();
@@ -77,7 +68,6 @@ class Rectangle: public Object
 public:
 	Rectangle(const char* id, int x, int y, int w, int h, double R, double G, double B):
 		Object(id, R, G, B), x(x), y(y), width(w), height(h) {};
-
 	~Rectangle(){};
 
 	void draw();
@@ -95,7 +85,6 @@ public:
 
 	Circle(const char *id, int x, int y, int rad, double r, double g, double b):
 		Object(id, r, g, b), x(x), y(y), radius(rad) {};
-
 	~Circle(){};
 
 	void draw();
@@ -114,7 +103,6 @@ public:
 
 	Bullet(const char *id, double x, double y, double rad, double d, double spd, const char* ownID):
 		Object(id), x(x), y(y), hitboxRad(rad), dir(d), speed(spd) {ownerID[0] = '\0'; strcat(ownerID, ownID);};
-
 	~Bullet(){};
 
 	double getX() const { return x; };
@@ -139,11 +127,12 @@ class Car: public Object
 	double rearAxesX, rearAxesY, rotCX, rotCY, rotRadius;
 
 	double mouseSens, mouseLastX;
+
+	IA *intel;
 public:
 	Car(const char *id, int x, int y, int rad, double yaw = 0, double cSpd = 1, double bSpd = 0.5,
 		 double r = 0, double g = 1, double b = 0);
-
-	~Car(){};
+	~Car(){ delete intel; };
 
 	void draw();
 
@@ -151,9 +140,17 @@ public:
 	double getY() const { return y; };
 	double getYaw() const { return yaw; };
 	double getHitboxRadius() const { return hitboxRad; };
-
+	
+	
 	void setX(int x){ this->x = x; };
 	void setY(int y){ this->y = y; };
+	
+	double getWheelYaw() { return wheelYaw; };
+	void setWheelYaw(double yaw){ this->wheelYaw = yaw; };
+	
+	void setIA(IA* ia){ this->intel = ia; };
+	void startIA(){ this->intel->switchInt(); };
+	int getNextInstr(){ return this->intel->getInstr(); };
 
 	double getTurnSpeed() const { return carSpeed; };
 	double getSpeed() const { return carSpeed; };
@@ -171,9 +168,12 @@ public:
 	Bullet* shoot();
 
 	vec3 getNextPosition(int direc, GLdouble);
+
+	void think(double timeDiff){ this->intel->doStep(timeDiff); };
+		
 };
 
 // ostream& operator<<(std::ostream& out, const Car& c);
-long long getCurrentTimeMS();
+//long long getCurrentTimeMS();
 
 #endif
