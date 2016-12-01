@@ -156,7 +156,7 @@ Car::Car(const char *id, int x, int y, int rad, double yaw, double cSpd, double 
 void setMeshes(char path)
 {
 	//TODO::this
-	carMesh
+	//carMesh
 }
 
 
