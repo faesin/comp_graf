@@ -9,6 +9,7 @@
 #include <GL/glut.h>
 #include "tinyxml2.h"
 #include "objects.h"
+#include "imageloader.h"
 
 using namespace std;
 using namespace tinyxml2;
@@ -40,6 +41,7 @@ int keyStatus[256];
 int g_winCond = 0;
 
 short int cameraState = 1;
+bool dayTime = true;
 
 bool gameStart = false, initialized = false;
 
@@ -47,6 +49,9 @@ double elapsedTime = 0; //In millisec
 
 char g_winMsg[10] = "GANHOU!"; 
 char g_loseMsg[10] = "PERDEU!"; 
+
+GLuint textureTrack;
+GLuint textureFinishLine;
 
 int openFile(int argc, char **argv);
 
@@ -147,6 +152,9 @@ void idleCallback()
 	if(keyStatus[(int)'3'] == 1)
 		cameraState = 3;
 
+	if(keyStatus[(int)'n'] == 1)
+		dayTime = !dayTime;
+
 	for(uint i = 0; i < g_bullets.size(); ++i)
 		g_bullets[i]->updatePosition(timeDiff);
 
@@ -208,13 +216,20 @@ void idleCallback()
 
 void displayCallback(void)
 {
-	glClearColor(1.0, 1.0, 1.0, 1.0);
+	glClearColor(g_windowBG_R, g_windowBG_G, g_windowBG_B, 0.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glLoadIdentity();
-	
+
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	glOrtho(g_orthoX.first, g_orthoX.second, g_orthoY.first, g_orthoY.second, -1.0, 1.0);
+
+	if(dayTime)
+	{
+		GLfloat sun_position[] = {(float)(g_orthoX.second - g_orthoX.first)/2, (float)(g_orthoY.second - g_orthoY.first)/2, 1, 0};
+		glLightfv(GL_LIGHT0, GL_POSITION, sun_position);
+		glEnable(GL_LIGHT0);
+	}
 
 	/*
 	switch(cameraState)
@@ -306,7 +321,12 @@ int main(int argc, char **argv)
 	glutInitWindowPosition(100, 100);
 	glutCreateWindow(g_windowTitle);
 
-	glClearColor(g_windowBG_R, g_windowBG_G, g_windowBG_B, 0.0);
+	glClearColor(g_windowBG_R, g_windowBG_G, g_windowBG_B, 1.0);
+
+	glShadeModel(GL_SMOOTH);
+	glEnable(GL_LIGHTING);
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LEQUAL);
 
 	//glMatrixMode(GL_PROJECTION);
 	//glLoadIdentity();
@@ -714,3 +734,27 @@ void renderBitmapString(int x, int y, void *font, char *string)
 	}
 }
 
+GLuint loadTextureRAW(const char* filename)
+{
+    GLuint texture;
+    
+    Image* image = loadBMP(filename);
+
+    glGenTextures( 1, &texture );
+    glBindTexture( GL_TEXTURE_2D, texture );
+    glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE,GL_MODULATE );
+    glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,GL_LINEAR );
+    glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,GL_LINEAR );
+    glTexImage2D(GL_TEXTURE_2D,                //Always GL_TEXTURE_2D
+                             0,                            //0 for now
+                             GL_RGB,                       //Format OpenGL uses for image
+                             image->width, image->height,  //Width and height
+                             0,                            //The border of the image
+                             GL_RGB, //GL_RGB, because pixels are stored in RGB format
+                             GL_UNSIGNED_BYTE, //GL_UNSIGNED_BYTE, because pixels are stored
+                                               //as unsigned numbers
+                             image->pixels);               //The actual pixel data
+    delete image;
+
+    return texture;
+}

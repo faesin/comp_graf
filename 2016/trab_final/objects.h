@@ -30,7 +30,7 @@ typedef enum dir {
 class Object
 {
 public:
-	Object(const char* nid, double R = 0, double G = 0, double B = 0) : r(R), g(G), b(B) {id[0] = '\0'; strcat(id, nid);};
+	Object(const char* nid, double R = 0, double G = 0, double B = 0, double S = 128) : r(R), g(G), b(B), shininess(S) {id[0] = '\0'; strcat(id, nid);};
 	virtual ~Object() {};
 
 	virtual void draw() = 0;
@@ -43,17 +43,18 @@ public:
 	double getR() const { return r; };
 	double getG() const { return g; };
 	double getB() const { return b; };
+	double getShininess() const { return shininess; };
 protected:
 	char id[256];
-	double r, g, b;
+	double r, g, b, shininess;
 };
 
 class Line: public Object
 {
 	double x, y, width;
 public:
-	Line(const char* id, int x, int y, int w, double R, double G, double B):
-		Object(id, R, G, B), x(x), y(y), width(w) {};
+	Line(const char* id, int x, int y, int w, double R, double G, double B, double S = 0):
+		Object(id, R, G, B, S), x(x), y(y), width(w) {};
 	~Line(){};
 
 	void draw();
@@ -67,8 +68,8 @@ class Rectangle: public Object
 {
 	double x, y, width, height;
 public:
-	Rectangle(const char* id, int x, int y, int w, int h, double R, double G, double B):
-		Object(id, R, G, B), x(x), y(y), width(w), height(h) {};
+	Rectangle(const char* id, int x, int y, int w, int h, double R, double G, double B, double S = 100):
+		Object(id, R, G, B, S), x(x), y(y), width(w), height(h) {};
 	~Rectangle(){};
 
 	void draw();
@@ -84,8 +85,8 @@ class Circle: public Object
 	double x, y, radius;
 public:
 
-	Circle(const char *id, int x, int y, int rad, double r, double g, double b):
-		Object(id, r, g, b), x(x), y(y), radius(rad) {};
+	Circle(const char *id, int x, int y, int rad, double R, double G, double B, double S = 100):
+		Object(id, R, G, B, S), x(x), y(y), radius(rad) {};
 	~Circle(){};
 
 	void draw();
@@ -93,6 +94,27 @@ public:
 	double getX() const {return x;};
 	double getY() const {return y;};
 	double getRadius() const {return radius;};
+};
+
+//Its a parallelepiped, but the name is too big
+class Cube: public Object
+{
+	double x, y, z, width, height, depth; //0:128
+
+public:
+	Cube(const char* id, int x, int y, int z, int w, int h, int d,
+		double R, double G, double B, double S = 128):
+		Object(id, R, G, B, S), x(x), y(y), z(z), width(w), height(h), depth(d) {};
+	~Cube(){};
+
+	void draw();
+
+	double getX() const {return x;};
+	double getY() const {return y;};
+	double getZ() const {return z;};
+	double getWidth() const {return width;};
+	double getHeight() const {return height;};
+	double getDepth() const {return depth;};
 };
 
 class Bullet: public Object
@@ -118,11 +140,11 @@ public:
 class Car: public Object
 {
 	double x, y, hitboxRad, yaw, carSpeed,
-			bodyHeight, bodyWidth,
-			suspHeight, suspWidth,
+			bodyHeight, bodyWidth, bodyDepth,
+			suspHeight, suspWidth, suspDepth,
 			wheelHeight, wheelWidth, wheelYaw,
 			wheelTrackHeight, wheelTrackWidth, trackDelta,
-			cannonHeight, cannonWidth, cannonYaw, cX, cY,
+			cannonHeight, cannonWidth, cannonDepth, cannonYaw, cX, cY,
 			bulletSpeed;
 
 	double rearAxesX, rearAxesY, rotCX, rotCY, rotRadius;
@@ -131,14 +153,13 @@ class Car: public Object
 
 	IA *intel;
 
-	static Mesh playerMesh;
-	static Mesh enemyMesh;
+	Mesh* carMesh;
 public:
 	Car(const char *id, int x, int y, int rad, double yaw = 0, double cSpd = 1, double bSpd = 0.5,
 		 double r = 0, double g = 1, double b = 0);
 	~Car(){ delete intel; };
 
-	void setMesh(char path);
+	void setMesh(Mesh* m){ carMesh = m; };
 
 	void draw();
 
@@ -146,7 +167,6 @@ public:
 	double getY() const { return y; };
 	double getYaw() const { return yaw; };
 	double getHitboxRadius() const { return hitboxRad; };
-	
 	
 	void setX(int x){ this->x = x; };
 	void setY(int y){ this->y = y; };

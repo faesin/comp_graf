@@ -2,7 +2,7 @@ CC=g++
 CFLAGS= -c -Wall -std=c++11
 LFLAGS= -lGL -lglut
 EXEC=trabalhocg
-SRCS=tinyxml2.cpp botia.cpp objloader.cpp objects.cpp main.cpp
+SRCS=tinyxml2.cpp imageloader.cpp botia.cpp objects.cpp main.cpp
 OBJ=$(SRCS:.cpp=.o)
 
 .PHONY: clean
@@ -18,3 +18,5 @@ $(EXEC): $(OBJ)
 clean: 
 	-rm *.o
 	-rm $(EXEC)
+
+celan: clean

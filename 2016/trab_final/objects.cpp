@@ -83,9 +83,22 @@ void Rectangle::draw()
 
 void Circle::draw()
 {
-	glColor3d(this->getR(), this->getG(), this->getB());
+	/*GLfloat mat_emission[] = {0.0, 0.0, 0.0, 1.0};
+	GLfloat mat_color[] = {(float)this->getR(), (float)this->getG(), (float)this->getB(), 1.0};
+	GLfloat mat_specular[] = {1.0, 1.0, 1.0, 1.0};
+	GLfloat mat_shininess[] = {this->getShininess()};*/
 
+	//glColor3d(this->getR(), this->getG(), this->getB());
 	glPushMatrix();
+		/*
+		glMaterialfv(GL_FRONT, GL_EMISSION, mat_emission);
+		glMaterialfv(GL_FRONT, GL_AMBIENT, mat_color);
+		glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_color);
+		glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+		glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);*/
+		
+		glColor3d(this->getR(), this->getG(), this->getB());
+
 		glTranslated(x, y, 0);
 
 		static const double circle_points = 100;
@@ -104,6 +117,31 @@ void Circle::draw()
 }
 
 /* ========================================================== */
+/* ========================== CUBE ========================== */
+/* ========================================================== */
+
+void Cube::draw()
+{
+	glPushMatrix();
+		GLfloat mat_emission[] = {0.0, 0.0, 0.0, 1.0};
+		GLfloat mat_color[] = {(float)this->getR(), (float)this->getG(), (float)this->getB(), 1.0};
+		GLfloat mat_specular[] = {1.0, 1.0, 1.0, 1.0};
+		GLfloat mat_shininess[] = {(float)this->getShininess()};
+
+		glMaterialfv(GL_FRONT, GL_EMISSION, mat_emission);
+		glMaterialfv(GL_FRONT, GL_AMBIENT, mat_color);
+		glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_color);
+		glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+		glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
+
+		glScaled(width, height, depth);
+		glTranslated(x, y, z);
+		glutSolidCube(1);
+	glPopMatrix();
+}
+
+
+/* ========================================================== */
 /* ========================= BULLET ========================= */
 /* ========================================================== */
 
@@ -111,7 +149,7 @@ void Bullet::draw()
 {
 	glPushMatrix();
 		glTranslatef(x, y, 0);
-		Circle("bulit", 0, 0, hitboxRad, 1, 0.15, 0.15).draw();
+		Circle("bulit", 0, 0, hitboxRad, 1, 0.15, 0.15, 75.0).draw();
 	glPopMatrix();
 }
 
@@ -156,7 +194,6 @@ Car::Car(const char *id, int x, int y, int rad, double yaw, double cSpd, double 
 void setMeshes(char path)
 {
 	//TODO::this
-	//carMesh
 }
 
 
@@ -165,7 +202,10 @@ void Car::draw()
 	glPushMatrix();
 		glTranslated(x, y, 0);
 		glRotated(yaw, 0, 0, 1);
-		// Circle("hitboxCar", 0, 0, hitboxRad, 0.5, 0.5, 0.5).draw();
+		//Circle("hitboxCar", 0, 0, hitboxRad, 0.5, 0.5, 0.5).draw();
+		Cube("bodyCar", 0, 0, 1, bodyWidth, bodyHeight, bodyDepth, getR(), getG(), getB(), 128).draw();
+		
+		/*
 		Rectangle("bodyCar", 0, 0, bodyWidth, bodyHeight, getR(), getG(), getB()).draw();
 
 		glPushMatrix();
@@ -247,7 +287,7 @@ void Car::draw()
 			glRotated(-cannonYaw, 0, 0, 1);
 			glTranslated(0, cannonHeight/2, 0);
 			Rectangle("cannon", 0, 0, cannonWidth, cannonHeight, getR()*0.1, getG()*0.1, getB()*0.1).draw();
-		glPopMatrix();
+		glPopMatrix();*/
 	glPopMatrix();
 }
 
