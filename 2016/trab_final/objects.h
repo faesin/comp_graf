@@ -36,64 +36,76 @@ public:
 	virtual void draw() = 0;
 	virtual double getX() const = 0;
 	virtual double getY() const = 0;
+	virtual double getZ() const = 0;
 
 	void setColor(double r, double g, double b) { this->r = r; this->g = g; this->b = b; };
+	void setTexture(GLuint tex) {texture = tex; useTexture = true;}
 	const char* getID() const { return this->id; };
 	
-	double getR() const { return r; };
-	double getG() const { return g; };
-	double getB() const { return b; };
-	double getShininess() const { return shininess; };
+	double getR() const {return r;};
+	double getG() const {return g;};
+	double getB() const {return b;};
+	double getShininess() const {return shininess;};
+	GLuint getTexture() const {return texture;};
+
+	bool getUseTexture() const {return useTexture;};
 protected:
 	char id[256];
 	double r, g, b, shininess;
+	GLuint texture;
+
+	bool useTexture = false;
 };
 
 class Line: public Object
 {
-	double x, y, width;
+	double x, y, z, width;
 public:
-	Line(const char* id, int x, int y, int w, double R, double G, double B, double S = 0):
-		Object(id, R, G, B, S), x(x), y(y), width(w) {};
+	Line(const char* id, int x, int y, int z, int w, double R, double G, double B, double S = 0):
+		Object(id, R, G, B, S), x(x), y(y), z(z), width(w) {};
 	~Line(){};
 
 	void draw();
 
 	double getX() const {return x;};
 	double getY() const {return y;};
+	double getZ() const {return z;};
 	double getWidth() const {return width;};
 };
 
 class Rectangle: public Object
 {
-	double x, y, width, height;
+	double x, y, z, width, height;
 public:
-	Rectangle(const char* id, int x, int y, int w, int h, double R, double G, double B, double S = 100):
-		Object(id, R, G, B, S), x(x), y(y), width(w), height(h) {};
+	Rectangle(const char* id, int x, int y, int z, int w, int h, double R, double G, double B, double S = 100):
+		Object(id, R, G, B, S), x(x), y(y), z(z), width(w), height(h) {};
 	~Rectangle(){};
 
 	void draw();
 
 	double getX() const {return x;};
 	double getY() const {return y;};
+	double getZ() const {return z;};
 	double getWidth() const {return width;};
 	double getHeight() const {return height;};
 };
 
 class Circle: public Object
 {
-	double x, y, radius;
+	double x, y, z, radius;
 public:
 
-	Circle(const char *id, int x, int y, int rad, double R, double G, double B, double S = 100):
-		Object(id, R, G, B, S), x(x), y(y), radius(rad) {};
+	Circle(const char *id, int x, int y, int z, int rad, double R, double G, double B, double S = 100):
+		Object(id, R, G, B, S), x(x), y(y), z(z), radius(rad) {};
 	~Circle(){};
 
 	void draw();
 
 	double getX() const {return x;};
 	double getY() const {return y;};
+	double getZ() const {return z;};
 	double getRadius() const {return radius;};
+
 };
 
 //Its a parallelepiped, but the name is too big
@@ -119,19 +131,20 @@ public:
 
 class Bullet: public Object
 {
-	double x, y, hitboxRad, dir, speed;
+	double x, y, z, hitboxRad, dir, speed;
 	char ownerID[256];
 
 public:
 
-	Bullet(const char *id, double x, double y, double rad, double d, double spd, const char* ownID):
-		Object(id), x(x), y(y), hitboxRad(rad), dir(d), speed(spd) {ownerID[0] = '\0'; strcat(ownerID, ownID);};
+	Bullet(const char *id, double x, double y, double z, double rad, double d, double spd, const char* ownID):
+		Object(id), x(x), y(y), z(z), hitboxRad(rad), dir(d), speed(spd) {ownerID[0] = '\0'; strcat(ownerID, ownID);};
 	~Bullet(){};
 
-	double getX() const { return x; };
-	double getY() const { return y; };
-	int getHitboxRadius() const { return hitboxRad; };
-	char* getOwner() { return ownerID; };
+	double getX() const {return x;};
+	double getY() const {return y;};
+	double getZ() const {return z;};
+	int getHitboxRadius() const {return hitboxRad;};
+	char* getOwner() {return ownerID;};
 	
 	void draw();
 	void updatePosition(double timeDiff);
@@ -139,12 +152,12 @@ public:
 
 class Car: public Object
 {
-	double x, y, hitboxRad, yaw, carSpeed,
+	double x, y, z, hitboxRad, yaw, carSpeed,
 			bodyHeight, bodyWidth, bodyDepth,
 			suspHeight, suspWidth, suspDepth,
 			wheelHeight, wheelWidth, wheelYaw,
 			wheelTrackHeight, wheelTrackWidth, trackDelta,
-			cannonHeight, cannonWidth, cannonDepth, cannonYaw, cX, cY,
+			cannonHeight, cannonWidth, cannonDepth, cannonYaw, cX, cY, cZ,
 			bulletSpeed;
 
 	double rearAxesX, rearAxesY, rotCX, rotCY, rotRadius;
@@ -155,7 +168,7 @@ class Car: public Object
 
 	Mesh* carMesh;
 public:
-	Car(const char *id, int x, int y, int rad, double yaw = 0, double cSpd = 1, double bSpd = 0.5,
+	Car(const char *id, int x, int y, int z, int rad, double yaw = 0, double cSpd = 1, double bSpd = 0.5,
 		 double r = 0, double g = 1, double b = 0);
 	~Car(){ delete intel; };
 
@@ -163,13 +176,14 @@ public:
 
 	void draw();
 
-	double getX() const { return x; };
-	double getY() const { return y; };
-	double getYaw() const { return yaw; };
-	double getHitboxRadius() const { return hitboxRad; };
+	double getX() const {return x;};
+	double getY() const {return y;};
+	double getZ() const {return z;};
+	double getYaw() const {return yaw;};
+	double getHitboxRadius() const {return hitboxRad;};
 	
-	void setX(int x){ this->x = x; };
-	void setY(int y){ this->y = y; };
+	void setX(int x) {this->x = x;};
+	void setY(int y) {this->y = y;};
 	
 	double getWheelYaw() { return wheelYaw; };
 	void setWheelYaw(double yaw){ this->wheelYaw = yaw; };

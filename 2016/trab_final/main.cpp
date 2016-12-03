@@ -60,6 +60,7 @@ bool checkBotCollision(uint index, vec3 nextPos);
 void makeBulletColision(GLdouble timeDiff);
 void checkLaps();
 void renderBitmapString(int x, int y, void *font, char *string);
+GLuint loadTextureRAW(const char* filename);
 
 void keyDownCallback(unsigned char key, int x, int y)
 {
@@ -218,7 +219,6 @@ void displayCallback(void)
 {
 	glClearColor(g_windowBG_R, g_windowBG_G, g_windowBG_B, 0.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glLoadIdentity();
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
@@ -246,7 +246,7 @@ void displayCallback(void)
 
 	for(uint i = 0; i < g_arena.size(); ++i)
 		g_arena[i]->draw();
-
+	/*
 	g_start->draw();
 
 	for(uint i = 0; i < g_objects.size(); ++i)
@@ -273,6 +273,7 @@ void displayCallback(void)
 			renderBitmapString((g_orthoX.second - g_orthoX.first)/2, (g_orthoY.second - g_orthoY.first)/2, GLUT_BITMAP_9_BY_15, g_loseMsg);
 			break;
 	}
+	*/
 
 	glutSwapBuffers();
 }
@@ -313,6 +314,11 @@ int main(int argc, char **argv)
 	char param[] = "";
 	char *fakeargv[] = { param, NULL };
 	int fakeargc = 1;
+
+	textureTrack = loadTextureRAW("asphalt.bmp");
+	g_arena[0]->setTexture(textureTrack);
+
+	textureFinishLine = loadTextureRAW("checker.bmp");
 
 	glutInit(&fakeargc, fakeargv);
 
@@ -461,9 +467,9 @@ int openFile(int argc, char **argv)
 			}
 
 			if(strstr(id, "LargadaChegada") != NULL)
-				g_start = new Rectangle(id, x+width/2, y+height/2, width, height, r, g, b);
+				g_start = new Rectangle(id, x+width/2, y+height/2, 0, width, height, r, g, b);
 			else
-				g_objects.push_back(new Rectangle(id, x+width/2, y+height/2, width, height, r, g, b));
+				g_objects.push_back(new Rectangle(id, x+width/2, y+height/2, 0, width, height, r, g, b));
 		}
 
 		if(strstr(objectElement->Name(), "circle") != NULL)
@@ -488,7 +494,7 @@ int openFile(int argc, char **argv)
 			
 			if(strstr(color, "green") != NULL)
 			{
-				g_player = new Car(id, x, y, radius, 0, g_carSpeed, g_bulletSpeed, 0, 1, 0);
+				g_player = new Car(id, x, y, 0.5, radius, 0, g_carSpeed, g_bulletSpeed, 0, 1, 0);
 			}else{
 
 				if(strstr(color, "red") != NULL)
@@ -499,7 +505,7 @@ int openFile(int argc, char **argv)
 
 					yaw = atan2(dx,dy) * 180.0/M_PI;
 					//cout << yaw << endl;
-					Car* enemy = new Car(id, x, y, radius, 270 - yaw, g_enCarSpeed, g_enBulletSpeed, 1, 0, 0);
+					Car* enemy = new Car(id, x, y, 0.5, radius, 270 - yaw, g_enCarSpeed, g_enBulletSpeed, 1, 0, 0);
 					enemy->setIA(new IA(g_enShootFreq));
 					enemy->setWheelYaw(7);
 					
@@ -521,9 +527,9 @@ int openFile(int argc, char **argv)
 					}
 
 					if(strstr(id, "Pista") != NULL)
-						g_arena.push_back(new Circle(id, x, y, radius, r, g, b));
+						g_arena.push_back(new Circle(id, x, y, 0, radius, r, g, b));
 					else
-						g_objects.push_back(new Circle(id, x, y, radius, r, g, b));
+						g_objects.push_back(new Circle(id, x, y, 0, radius, r, g, b));
 				}				
 			}
 		}
