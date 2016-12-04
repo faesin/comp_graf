@@ -6,6 +6,8 @@
 #include <cstring>
 #include <map>
 
+#include <GL/gl.h>
+#include <GL/glu.h>
 #include <GL/glut.h>
 #include "tinyxml2.h"
 #include "objects.h"
@@ -51,6 +53,7 @@ char g_winMsg[10] = "GANHOU!";
 char g_loseMsg[10] = "PERDEU!"; 
 
 GLuint textureTrack;
+GLuint textureGrass;
 GLuint textureFinishLine;
 
 int openFile(int argc, char **argv);
@@ -314,12 +317,7 @@ int main(int argc, char **argv)
 	char param[] = "";
 	char *fakeargv[] = { param, NULL };
 	int fakeargc = 1;
-
-	textureTrack = loadTextureRAW("asphalt.bmp");
-	g_arena[0]->setTexture(textureTrack);
-
-	textureFinishLine = loadTextureRAW("checker.bmp");
-
+	
 	glutInit(&fakeargc, fakeargv);
 
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_DEPTH);
@@ -338,6 +336,25 @@ int main(int argc, char **argv)
 	//glLoadIdentity();
 	//glOrtho(g_orthoX.first, g_orthoX.second, g_orthoY.first, g_orthoY.second, -1.0, 1.0);
 	
+	textureTrack = loadTextureRAW("asphalt.bmp");
+	if(textureTrack == 0)
+	{
+		cerr << "Could not bind texture \"asphalt.bmp\"; Exiting... " << endl;
+		return 1;
+	}
+	textureGrass = loadTextureRAW("grass.bmp");
+
+	if(textureGrass == 0)
+	{
+		cerr << "Could not bind texture \"grass.bmp\"; Exiting... " << endl;
+		return 1;
+	}
+	g_arena[0]->setTexture(textureTrack);
+	g_arena[1]->setTexture(textureGrass);
+
+	textureFinishLine = loadTextureRAW("checker.bmp");
+
+
 	glutDisplayFunc(displayCallback);
 	glutReshapeFunc(reshapeCallback);
 	glutMouseFunc(mouseCallback);
@@ -748,9 +765,9 @@ GLuint loadTextureRAW(const char* filename)
 
     glGenTextures( 1, &texture );
     glBindTexture( GL_TEXTURE_2D, texture );
-    glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE,GL_MODULATE );
-    glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,GL_LINEAR );
-    glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,GL_LINEAR );
+    glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE,GL_MODULATE);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,GL_LINEAR);
     glTexImage2D(GL_TEXTURE_2D,                //Always GL_TEXTURE_2D
                              0,                            //0 for now
                              GL_RGB,                       //Format OpenGL uses for image

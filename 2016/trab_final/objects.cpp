@@ -83,32 +83,24 @@ void Rectangle::draw()
 
 void Circle::draw()
 {
-
-
-	//glColor3d(this->getR(), this->getG(), this->getB());
 	glPushMatrix();
-		GLfloat mat_emission[] = {0.1, 0.1, 0.1, 1.0};
+		glEnable(GL_TEXTURE_2D);
+		
+		GLfloat mat_emission[] = {0.5, 0.5, 0.5, 1.0};
 		GLfloat mat_color[] = {(float)this->getR(), (float)this->getG(), (float)this->getB(), 1.0};
 		GLfloat mat_specular[] = {1.0, 1.0, 1.0, 1.0};
 		GLfloat mat_shininess[] = {(float)this->getShininess()};
 
 		
+		glMaterialfv(GL_FRONT, GL_EMISSION, mat_emission);
 		glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mat_color);
 		glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
 		glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
 		
-		if(this->getUseTexture())
-		{
-			glEnable(GL_TEXTURE_2D);
-			glMaterialfv(GL_FRONT, GL_EMISSION, mat_emission);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);//X
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);//Y
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);//X
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);//Y
 
-			glBindTexture(GL_TEXTURE_2D, this->getTexture());
-
-		}else{
-			glMaterialfv(GL_FRONT, GL_EMISSION, mat_color);
-		}
+		glBindTexture(GL_TEXTURE_2D, this->getTexture());
 
 		//glColor3d(this->getR(), this->getG(), this->getB());
 
@@ -121,17 +113,8 @@ void Circle::draw()
 		glBegin(GL_POLYGON);
 			for(double angle1 = 0.0, i = 0; i < circle_points; ++i)
 			{
-				double	vx = radius * cos(angle1),
-						vy =  radius * sin(angle1),
-						vz = this->getZ();
-				
-				if(this->getUseTexture())
-				{
-					//glNormal3f(0,0,1);
-					glTexCoord2f(vx,vy);
-				}
-
-				glVertex3d(vx, vy, vz);
+				glVertex3d(radius * cos(angle1), radius * sin(angle1),  this->getZ());
+				glTexCoord2f(radius * cos(angle1), radius * sin(angle1));
 				angle1 += angle;
 			}
 		glEnd();

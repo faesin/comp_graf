@@ -39,7 +39,7 @@ public:
 	virtual double getZ() const = 0;
 
 	void setColor(double r, double g, double b) { this->r = r; this->g = g; this->b = b; };
-	void setTexture(GLuint tex) {texture = tex; useTexture = true;}
+	void setTexture(GLuint tex) {texture = tex;}
 	const char* getID() const { return this->id; };
 	
 	double getR() const {return r;};
@@ -48,13 +48,10 @@ public:
 	double getShininess() const {return shininess;};
 	GLuint getTexture() const {return texture;};
 
-	bool getUseTexture() const {return useTexture;};
 protected:
 	char id[256];
 	double r, g, b, shininess;
 	GLuint texture;
-
-	bool useTexture = false;
 };
 
 class Line: public Object
