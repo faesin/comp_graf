@@ -65,6 +65,7 @@ GLuint textureSky1;
 GLuint textureSky2;
 GLuint textureSky3;
 GLuint textureSky4;
+GLuint textureStars;
 
 double g_camTheta = 0, g_camPhi = 45, g_camSens = 0.1;
 int lastMouseX, lastMouseY;
@@ -77,6 +78,8 @@ bool checkBotCollision(uint index, vec3 nextPos);
 void makeBulletColision(GLdouble timeDiff);
 void checkLaps();
 void renderBitmapString(int x, int y, void *font, char *string);
+void PrintText(GLfloat x, GLfloat y, const char * text, double r, double g, double b);
+void RasterChars(GLfloat x, GLfloat y, GLfloat z, const char * text, double r, double g, double b);
 GLuint loadTextureRAW(const char* filename);
 
 void keyDownCallback(unsigned char key, int x, int y)
@@ -242,14 +245,40 @@ void displayCallback(void)
 		GLfloat sun_position[] = {(float)(g_orthoX.second - g_orthoX.first)/2, (float)(g_orthoY.second - g_orthoY.first)/2, (float)g_orthoZ.second - 1, 0};
 		glLightfv(GL_LIGHT0, GL_POSITION, sun_position);
 		glEnable(GL_LIGHT0);
+		glDisable(GL_LIGHT1);
+	}else{
+		glDisable(GL_LIGHT0);
+
+		GLfloat light_ambient[] = {0.2, 0.2, 0.2, 1.0};
+		GLfloat light_diffuse[] = {1.0, 1.0, 1.0, 1.0};
+		GLfloat light_specular[] = {1.0, 1.0, 1.0, 1.0};
+		
+		GLfloat light_dir[] = {	g_player->getX() - sin(g_player->getYaw() * M_PI/180) * g_player->getHitboxRadius(),
+								g_player->getY() + cos(g_player->getYaw() * M_PI/180) * g_player->getHitboxRadius(),
+								0 };
+		
+		GLfloat player_pos[] = {(float)g_player->getX(),(float)g_player->getY(), (float)g_player->getZ() + 5};
+
+		glLightfv(GL_LIGHT1, GL_AMBIENT, light_ambient);
+		glLightfv(GL_LIGHT1, GL_DIFFUSE, light_diffuse);
+		glLightfv(GL_LIGHT1, GL_SPECULAR, light_specular);
+		glLightf(GL_LIGHT1, GL_CONSTANT_ATTENUATION, 1.0);
+		glLightf(GL_LIGHT1, GL_LINEAR_ATTENUATION, 0.5);
+		glLightf(GL_LIGHT1, GL_QUADRATIC_ATTENUATION, 0.2);
+
+		glLightf(GL_LIGHT1, GL_SPOT_CUTOFF, 45.0f);
+		glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, light_dir);
+		glLightfv(GL_LIGHT1, GL_POSITION, player_pos);
+		glEnable(GL_LIGHT1);
+
 	}
 
-	glViewport(0, 0, g_windowWidth, g_windowHeight);
+	glViewport(0, 0, g_windowWidth, 500);
 	
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 
-	gluPerspective(90, g_windowWidth/g_windowHeight, 0.1f, 1000.0f);
+	gluPerspective(90, g_windowWidth/500, 0.1f, 1000.0f);
 	
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
@@ -351,17 +380,39 @@ void displayCallback(void)
 	char buffer[256];
 	sprintf(buffer, "%d", (int)elapsedTime/1000);
 	renderBitmapString(g_orthoX.second - 25, g_orthoY.second - 15, GLUT_BITMAP_9_BY_15, buffer);
-	
+	*/
 	switch(g_winCond)
 	{
 		case 1:
-			renderBitmapString((g_orthoX.second - g_orthoX.first)/2, (g_orthoY.second - g_orthoY.first)/2, GLUT_BITMAP_9_BY_15, g_winMsg);
+			//renderBitmapString(, (g_orthoY.second - g_orthoY.first)/2, GLUT_BITMAP_9_BY_15, g_winMsg);
+			glLoadIdentity();
+			PrintText(500/2, 500/2, g_winMsg, 1, 0, 1);
 			break;
 		case -1:
-			renderBitmapString((g_orthoX.second - g_orthoX.first)/2, (g_orthoY.second - g_orthoY.first)/2, GLUT_BITMAP_9_BY_15, g_loseMsg);
+			//renderBitmapString((g_orthoX.second - g_orthoX.first)/2, (g_orthoY.second - g_orthoY.first)/2, GLUT_BITMAP_9_BY_15, g_loseMsg);
+			glLoadIdentity();
+			PrintText(500/2, 500/2, g_loseMsg, 1, 0, 1);
 			break;
 	}
-	*/
+
+	glViewport(0, 500, g_windowWidth, 700);
+	
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+
+	gluPerspective(90, g_windowWidth/200, 0.1f, 1000.0f);
+
+
+	
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+
+	camX = g_player->getX() + sin((g_player->getYaw() + g_camTheta) * M_PI/180) * g_player->getHitboxRadius() * 1.5;
+	camY = g_player->getY() - cos((g_player->getYaw() + g_camTheta) * M_PI/180) * g_player->getHitboxRadius() * 1.5;
+	camZ = g_player->getZ() + sin(g_camPhi * M_PI/180) * g_player->getHitboxRadius() * 1.5;
+
+	gluLookAt(camX, camY, camZ, g_player->getX(), g_player->getY(), g_player->getZ(), 0, 0, 1);
+
 
 	glutSwapBuffers();
 }
@@ -477,6 +528,8 @@ int main(int argc, char **argv)
 	textureSky2 = loadTextureRAW("skybox2.bmp");
 	textureSky3 = loadTextureRAW("skybox3.bmp");
 	textureSky4 = loadTextureRAW("skybox4.bmp");
+
+	textureStars = loadTextureRAW("stars1.bmp");
 	
 	g_player->setBodyTex(textureMetal);
 	g_player->setCockpitTex(textureGlass);
@@ -643,7 +696,7 @@ int openFile(int argc, char **argv)
 
 			if((strstr(id, "Pista") != NULL) && (g_windowWidth < radius*2))
 			{
-				g_windowWidth = g_windowHeight = 500;
+				g_windowWidth = 500; g_windowHeight = 700;
 
 				g_orthoX = make_pair(x-radius, x+radius);
 				g_orthoY = make_pair(y-radius, y+radius);
@@ -924,3 +977,37 @@ GLuint loadTextureRAW(const char* filename)
 
     return texture;
 }
+
+void PrintText(GLfloat x, GLfloat y, const char * text, double r, double g, double b)
+{
+	//Draw text considering a 2D space (disable all 3d features)
+	glMatrixMode (GL_PROJECTION);
+	//Push to recover original PROJECTION MATRIX
+	glPushMatrix();
+		glLoadIdentity ();
+		glOrtho (0, 1, 0, 1, -1, 1);
+		RasterChars(x, y, 0, text, r, g, b);
+	glPopMatrix();
+
+	glMatrixMode (GL_MODELVIEW);
+}
+
+void RasterChars(GLfloat x, GLfloat y, GLfloat z, const char * text, double r, double g, double b)
+{
+	//Push to recover original attributes
+	glPushAttrib(GL_ENABLE_BIT);
+		glDisable(GL_LIGHTING);
+		glDisable(GL_TEXTURE_2D);
+		//Draw text in the x, y, z position
+		glColor3f(0,1,0);
+		glRasterPos3f(x, y, z);
+		const char* tmpStr;
+		tmpStr = text;
+		while( *tmpStr )
+ 		{
+	 		glutBitmapCharacter(GLUT_BITMAP_9_BY_15, *tmpStr);
+			tmpStr++;
+		}
+	glPopAttrib();
+}
+
