@@ -59,6 +59,12 @@ GLuint textureFinishLine;
 GLuint textureMetal;
 GLuint textureGlass;
 GLuint textureTire;
+GLuint textureCap;
+GLuint textureSkyUP;
+GLuint textureSky1;
+GLuint textureSky2;
+GLuint textureSky3;
+GLuint textureSky4;
 
 double g_camTheta = 0, g_camPhi = 45, g_camSens = 0.1;
 int lastMouseX, lastMouseY;
@@ -231,21 +237,19 @@ void displayCallback(void)
 	glClearColor(g_windowBG_R, g_windowBG_G, g_windowBG_B, 0.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	//glOrtho(g_orthoX.first, g_orthoX.second, g_orthoY.first, g_orthoY.second, g_orthoZ.first, g_orthoZ.second);
-
 	if(dayTime)
 	{
-		GLfloat sun_position[] = {(float)(g_orthoX.second - g_orthoX.first)/2, (float)(g_orthoY.second - g_orthoY.first)/2, 1, 0};
+		GLfloat sun_position[] = {(float)(g_orthoX.second - g_orthoX.first)/2, (float)(g_orthoY.second - g_orthoY.first)/2, (float)g_orthoZ.second - 1, 0};
 		glLightfv(GL_LIGHT0, GL_POSITION, sun_position);
 		glEnable(GL_LIGHT0);
 	}
-	
+
 	glViewport(0, 0, g_windowWidth, g_windowHeight);
 	
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 
-	gluPerspective(90, g_windowWidth/g_windowHeight, 0.1f, 500.0f);
+	gluPerspective(90, g_windowWidth/g_windowHeight, 0.1f, 1000.0f);
 	
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
@@ -267,6 +271,13 @@ void displayCallback(void)
 			break;
 		}
 		case 2:
+			gluLookAt(g_player->getCX(),
+					g_player->getCY(),
+					g_player->getCZ() + g_player->getHitboxRadius() * 0.2,
+					g_player->getCX() - sin((g_player->getYaw() - g_player->getCannonYaw()) * M_PI/180) * g_player->getHitboxRadius() * 0.3 ,
+					g_player->getCY() + cos((g_player->getYaw() - g_player->getCannonYaw()) * M_PI/180) * g_player->getHitboxRadius() * 0.3 ,
+					g_player->getCZ() + sin(g_player->getCannonPitch() * M_PI/180) * g_player->getHitboxRadius() * 0.3 ,
+					0, 0, 1);
 			break;
 		case 3:
 		{
@@ -282,6 +293,46 @@ void displayCallback(void)
 
 	for(uint i = 0; i < g_arena.size(); ++i)
 		g_arena[i]->draw();
+	
+	glPushMatrix();
+		glTranslated(g_arena[0]->getX(), g_arena[0]->getY(), g_orthoZ.first);
+		Rectangle arenaFloor("floor", 0, 0, 0, g_orthoX.second - g_orthoX.first, g_orthoY.second - g_orthoY.first, 0, 1, 0, 100);
+		arenaFloor.setTexture(textureGrass);
+		arenaFloor.draw();
+		
+		glPushMatrix();
+			glTranslated((g_orthoX.second - g_orthoX.first)/2, 0, (g_orthoZ.second - g_orthoZ.first)/2);
+			glRotated(-90, 0, 1, 0);
+			Rectangle arenaWall("wall", 0, 0, 0, g_orthoZ.second - g_orthoZ.first, g_orthoY.second - g_orthoY.first, 0.75, 0.75, 0.75, 128);
+			arenaWall.setTexture(textureSky3);
+			arenaWall.draw();
+		glPopMatrix();
+
+		glPushMatrix();
+			glTranslated(-(g_orthoX.second - g_orthoX.first)/2, 0, (g_orthoZ.second - g_orthoZ.first)/2);
+			glRotated(-90, 0, 1, 0);
+			arenaWall.draw();
+		glPopMatrix();
+
+		glPushMatrix();
+			glTranslated(0, (g_orthoY.second - g_orthoY.first)/2, (g_orthoZ.second - g_orthoZ.first)/2);
+			glRotated(90, 1, 0, 0);
+			glRotated(90, 0, 0 , 1);
+			arenaWall.draw();
+		glPopMatrix();
+		
+		glPushMatrix();
+			glTranslated(0, -(g_orthoY.second - g_orthoY.first)/2, (g_orthoZ.second - g_orthoZ.first)/2);
+			glRotated(90, 1, 0, 0);
+			glRotated(90, 0, 0 , 1);
+			arenaWall.draw();
+		glPopMatrix();
+
+		glTranslated(0, 0, g_orthoZ.second - g_orthoZ.first);
+		Rectangle arenaSky("sky", 0, 0, 0, g_orthoX.second - g_orthoX.first, g_orthoY.second - g_orthoY.first, 0.75, 0.75, 0.75, 100);
+		arenaSky.setTexture(textureSkyUP);
+		arenaSky.draw();
+	glPopMatrix();
 	
 	g_start->draw();
 	
@@ -408,55 +459,37 @@ int main(int argc, char **argv)
 	//glOrtho(g_orthoX.first, g_orthoX.second, g_orthoY.first, g_orthoY.second, -1.0, 1.0);
 	
 	textureTrack = loadTextureRAW("asphalt.bmp");
-	if(textureTrack == 0)
-	{
-		cerr << "Could not bind texture \"asphalt.bmp\"; Exiting... " << endl;
-		return 1;
-	}
 	textureGrass = loadTextureRAW("grass.bmp");
 
-	if(textureGrass == 0)
-	{
-		cerr << "Could not bind texture \"grass.bmp\"; Exiting... " << endl;
-		return 1;
-	}
 	g_arena[0]->setTexture(textureTrack);
 	g_arena[1]->setTexture(textureGrass);
 
 	textureFinishLine = loadTextureRAW("checker.bmp");
-	if(textureFinishLine == 0)
-	{
-		cerr << "Could not bind texture \"checker.bmp\"; Exiting... " << endl;
-		return 1;
-	}
 	g_start->setTexture(textureFinishLine);
 
 	textureMetal = loadTextureRAW("metal.bmp");
-	if(textureMetal == 0)
-	{
-		cerr << "Could not bind texture \"metal.bmp\"; Exiting... " << endl;
-		return 1;
-	}
-	
 	textureGlass = loadTextureRAW("glass.bmp");
-	if(textureMetal == 0)
-	{
-		cerr << "Could not bind texture \"glass.bmp\"; Exiting... " << endl;
-		return 1;
-	}
-	
 	textureTire = loadTextureRAW("tire.bmp");
-	if(textureMetal == 0)
-	{
-		cerr << "Could not bind texture \"tire.bmp\"; Exiting... " << endl;
-		return 1;
-	}
+	textureCap = loadTextureRAW("cap.bmp");
+
+	textureSkyUP = loadTextureRAW("skyboxUP.bmp");
+	textureSky1 = loadTextureRAW("skybox1.bmp");
+	textureSky2 = loadTextureRAW("skybox2.bmp");
+	textureSky3 = loadTextureRAW("skybox3.bmp");
+	textureSky4 = loadTextureRAW("skybox4.bmp");
+	
 	g_player->setBodyTex(textureMetal);
 	g_player->setCockpitTex(textureGlass);
 	g_player->setTireTex(textureTire);
+	g_player->setCapTex(textureCap);
 
 	for(uint i = 0; i < g_cars.size(); ++i)
+	{
 		g_cars[i]->setBodyTex(textureMetal);
+		g_cars[i]->setCockpitTex(textureGlass);
+		g_cars[i]->setTireTex(textureTire);
+		g_cars[i]->setCapTex(textureCap);
+	}
 
 
 	glutDisplayFunc(displayCallback);
@@ -610,7 +643,7 @@ int openFile(int argc, char **argv)
 
 			if((strstr(id, "Pista") != NULL) && (g_windowWidth < radius*2))
 			{
-				g_windowWidth = g_windowHeight = radius*2;
+				g_windowWidth = g_windowHeight = 500;
 
 				g_orthoX = make_pair(x-radius, x+radius);
 				g_orthoY = make_pair(y-radius, y+radius);
@@ -621,7 +654,7 @@ int openFile(int argc, char **argv)
 			if(strstr(color, "green") != NULL)
 			{
 				g_player = new Car(id, x, y, radius*0.4, radius, 0, g_carSpeed, g_bulletSpeed, 0, 1, 0);
-				g_orthoZ = make_pair(-1.0, 4 * radius * 0.5);
+				g_orthoZ = make_pair(-1, 4 * radius);
 			}else{
 
 				if(strstr(color, "red") != NULL)
@@ -807,8 +840,9 @@ void makeBulletColision(GLdouble timeDiff)
 			{
 				double dx = (*cIt)->getX() - (*bIt)->getX();
 				double dy = (*cIt)->getY() - (*bIt)->getY();
+				double dz = (*cIt)->getZ() - (*bIt)->getZ();
 
-				double dist = sqrt(dx * dx + dy * dy);
+				double dist = sqrt(dx * dx + dy * dy + dz * dz);
 
 				if(dist <= (*cIt)->getHitboxRadius() + (*bIt)->getHitboxRadius())
 				{
@@ -827,8 +861,9 @@ void makeBulletColision(GLdouble timeDiff)
 		}else{
 			double dx = g_player->getX() - (*bIt)->getX();
 			double dy = g_player->getY() - (*bIt)->getY();
+			double dz = g_player->getZ() - (*bIt)->getZ();
 
-			double dist = sqrt(dx * dx + dy * dy);
+			double dist = sqrt(dx * dx + dy * dy + dz * dz);
 
 			if(dist <= g_player->getHitboxRadius() + (*bIt)->getHitboxRadius())
 			{
@@ -838,8 +873,6 @@ void makeBulletColision(GLdouble timeDiff)
 
 		if(bErased)
 			continue;
-		
-		// cout << g_orthoY.first << " " << g_orthoY.second << endl;
 
 		if(((*bIt)->getX() < g_orthoX.first || (*bIt)->getX() > g_orthoX.second)
 			|| ((*bIt)->getY() < g_orthoY.first || (*bIt)->getY() > g_orthoY.second))

@@ -156,13 +156,13 @@ public:
 
 class Bullet: public Object
 {
-	double x, y, z, hitboxRad, dir, speed;
+	double x, y, z, hitboxRad, yaw, pitch, speed;
 	char ownerID[256];
 
 public:
 
-	Bullet(const char *id, double x, double y, double z, double rad, double d, double spd, const char* ownID):
-		Object(id), x(x), y(y), z(z), hitboxRad(rad), dir(d), speed(spd) {ownerID[0] = '\0'; strcat(ownerID, ownID);};
+	Bullet(const char *id, double x, double y, double z, double rad, double d, double p, double spd, const char* ownID):
+		Object(id), x(x), y(y), z(z), hitboxRad(rad), yaw(d), pitch(p), speed(spd) {ownerID[0] = '\0'; strcat(ownerID, ownID);};
 	~Bullet(){};
 
 	double getX() const {return x;};
@@ -184,12 +184,12 @@ class Car: public Object
 			suspHeight, suspWidth, suspDepth,
 			wheelRadius, wheelWidth, wheelYaw,
 			wheelTrackHeight, wheelTrackWidth, trackDelta,
-			cannonHeight, cannonWidth, cannonDepth, cannonYaw, cX, cY, cZ,
+			cannonHeight, cannonWidth, cannonDepth, cannonYaw, cannonPitch, cX, cY, cZ,
 			bulletSpeed;
 
 	double rearAxesX, rearAxesY, rotCX, rotCY, rotRadius;
 
-	double mouseSens, mouseLastX;
+	double mouseSens, mouseLastX, mouseLastY;
 
 	IA *intel;
 
@@ -198,6 +198,7 @@ class Car: public Object
 	GLuint bodyTex;
 	GLuint cockpitTex;
 	GLuint tireTex;
+	GLuint capTex;
 
 public:
 	Car(const char *id, double x, double y, double z, double rad, double yaw = 0, double cSpd = 1, double bSpd = 0.5,
@@ -213,6 +214,12 @@ public:
 	double getZ() const {return z;};
 	double getYaw() const {return yaw;};
 	double getHitboxRadius() const {return hitboxRad;};
+
+	double getCX() const {return cX;};
+	double getCY() const {return cY;};
+	double getCZ() const {return cZ;};
+	double getCannonYaw() const {return cannonYaw;};
+	double getCannonPitch() const {return cannonPitch;};
 	
 	void setX(int x) {this->x = x;};
 	void setY(int y) {this->y = y;};
@@ -246,6 +253,7 @@ public:
 	void setBodyTex(GLuint tex) {bodyTex = tex;};
 	void setCockpitTex(GLuint tex) {cockpitTex = tex;};
 	void setTireTex(GLuint tex) {tireTex = tex;};
+	void setCapTex(GLuint tex) {capTex = tex;};
 		
 };
 

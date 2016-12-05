@@ -125,6 +125,41 @@ void Circle::draw()
 }
 
 /* ========================================================== */
+/* ======================== CILINDER ======================== */
+/* ========================================================== */
+
+void Cilinder::draw()
+{
+	glPushMatrix();
+		glEnable(GL_TEXTURE_2D);
+		
+		GLfloat mat_emission[] = {0.5, 0.5, 0.5, 1.0};
+		GLfloat mat_color[] = {(float)this->getR(), (float)this->getG(), (float)this->getB(), 1.0};
+		GLfloat mat_specular[] = {0.0, 0.0, 0.0, 1.0};
+		GLfloat mat_shininess[] = {(float)this->getShininess()};
+
+		
+		glMaterialfv(GL_FRONT, GL_EMISSION, mat_emission);
+		glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mat_color);
+		glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+		glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
+		
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);//X
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);//Y
+
+		glBindTexture(GL_TEXTURE_2D, this->getTexture());
+
+		glTranslated(x, y, z);
+		
+		GLUquadricObj *quadratic;
+		quadratic = gluNewQuadric();
+
+		gluCylinder(quadratic, radius, radius, height, 32, 32);
+
+	glPopMatrix();
+}
+
+/* ========================================================== */
 /* ========================== CUBE ========================== */
 /* ========================================================== */
 
@@ -199,15 +234,29 @@ void Cube::draw()
 void Bullet::draw()
 {
 	glPushMatrix();
-		glTranslatef(x, y, 0);
-		Circle("bulit", 0, 0, hitboxRad, 1, 0.15, 0.15, 75.0).draw();
+		GLfloat mat_emission[] = {0.0, 0.0, 0.0, 1.0};
+		GLfloat mat_color[] = {(float)this->getR(), (float)this->getG(), (float)this->getB(), 1.0};
+		GLfloat mat_specular[] = {1.0, 1.0, 1.0, 1.0};
+		GLfloat mat_shininess[] = {(float)this->getShininess()};
+
+		
+		glMaterialfv(GL_FRONT, GL_EMISSION, mat_emission);
+		glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mat_color);
+		glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+		glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
+
+		glTranslatef(x, y, z);
+		glutSolidSphere(hitboxRad, 100, 16);
+
+		//Circle("bulit", 0, 0, hitboxRad, 1, 0.15, 0.15, 75.0).draw();
 	glPopMatrix();
 }
 
 void Bullet::updatePosition(GLdouble timeDiff)
 {
-	x -= sin(dir * M_PI / 180.0)*speed*timeDiff;
-	y += cos(dir * M_PI / 180.0)*speed*timeDiff;
+	x -= sin(yaw * M_PI / 180.0)*speed*timeDiff;
+	y += cos(yaw * M_PI / 180.0)*speed*timeDiff;
+	z += sin(pitch * M_PI / 180.0)*speed*timeDiff; 
 }
 
 /* =========================================================== */
@@ -238,6 +287,10 @@ Car::Car(const char *id, double x, double y, double z, double rad, double yaw, d
 	cannonWidth = rad * 0.1;
 	cannonDepth = rad * 0.1;
 
+	cannonPitch = 0;
+	cannonYaw = 0;
+
+
 	mouseSens = 0.5;
 
 	cX = x - sin(yaw*M_PI/180) * bodyHeight/2;
@@ -248,8 +301,6 @@ Car::Car(const char *id, double x, double y, double z, double rad, double yaw, d
 	trackDelta = 0;
 	intel = NULL;
 
-	cout << id << endl;
-	cout << bodyHeight << " " << bodyWidth << " " << bodyDepth << endl;
 }
 
 void setMeshes(char path)
@@ -334,60 +385,92 @@ void Car::draw()
 		//body.setTexture(bodyTex);
 		//body.draw();
 
-		//GLUquadricObj *quadratic;
-		//quadratic = gluNewQuadric();
-		//glRotatef(90.0f, 0.0f, 1.0f, 0.0f);
 
 		glPushMatrix();
 			glTranslated(bodyWidth/2 + suspWidth/2, bodyHeight/2 - wheelRadius/2, 0);
 			Cube susp1("suspFrontRight", 0, 0, 0, suspWidth, suspHeight, suspDepth, getR()*0.5, getG()*0.5, getB()*0.5);
 			susp1.setTexture(bodyTex);
 			susp1.draw();
-
-			glTranslated(suspWidth/2 + wheelWidth/2, 0, 0);
-			glRotated(90, 0, 1, 0);
+		
+			glTranslated(suspWidth/2, 0, 0);
 			glRotated(wheelYaw, 0, 0, 1);
-			gluCylinder(quadratic, wheelRadius, wheelRadius, wheelWidth, 32, 32);
-			//Rectangle("wheelFrontRight", 0, 0, wheelWidth, wheelHeight, getR()*0.3, getG()*0.3, getB()*0.3).draw();
+			glRotated(90, 0, 1, 0);
+			glRotated(-trackDelta, 0, 0, 1);
+
+			Cilinder tire("pneu", 0, 0, 0, wheelRadius, wheelWidth, 0.5, 0.5, 0.5, 0);
+			tire.setTexture(tireTex);
+			tire.draw();
+			
+			Circle caps("carlota", 0, 0, 0, wheelRadius, 0.5, 0.5, 0.5, 10);
+			caps.setTexture(capTex);
+			caps.draw();
+
+			glTranslated(0, 0, wheelWidth);
+			caps.draw();
+
 		glPopMatrix();
 
 		glPushMatrix();
 			glTranslated(-bodyWidth/2 - suspWidth/2, bodyHeight/2 - wheelRadius/2, 0);
 			susp1.draw();
 	
-			glTranslated(-suspWidth/2 - wheelWidth/2, 0, 0);
+			glTranslated(-suspWidth/2 -wheelWidth, 0, 0);
 			glRotated(wheelYaw, 0, 0, 1);
-			//Rectangle("wheelFrontLeft", 0, 0, wheelWidth, wheelHeight, getR()*0.3, getG()*0.3, getB()*0.3).draw();
+			glRotated(90, 0, 1, 0);
+			glRotated(-trackDelta, 0, 0, 1);
+			tire.draw();
+			
+			caps.draw();
+
+			glTranslated(0, 0, wheelWidth);
+			caps.draw();
+
 		glPopMatrix();
 
 		glPushMatrix();
 			glTranslated(bodyWidth/2 + suspWidth/2, - bodyHeight/2 + wheelRadius/2, 0);
 			susp1.draw();
-	
-			//glTranslated(suspWidth/2 + wheelWidth/2, 0, 0);
-			//Rectangle("wheelBackRight", 0, 0, wheelWidth, wheelHeight, getR()*0.3, getG()*0.3, getB()*0.3).draw();
+			
+			glTranslated(suspWidth/2, 0, 0);
+			glRotated(90, 0, 1, 0);
+			glRotated(-trackDelta, 0, 0, 1);
+
+			tire.draw();
+			caps.draw();
+
+			glTranslated(0, 0, wheelWidth);
+			caps.draw();
 
 		glPopMatrix();
 
 		glPushMatrix();
 			glTranslated(-bodyWidth/2 - suspWidth/2, -bodyHeight/2 + wheelRadius/2, 0);
 			susp1.draw();
-	
-			//glTranslated(-suspWidth/2 - wheelWidth/2, 0, 0);
-			//Rectangle("wheelBackLeft", 0, 0, wheelWidth, wheelHeight, getR()*0.3, getG()*0.3, getB()*0.3).draw();
+			
+			glTranslated(-suspWidth/2 -wheelWidth, 0, 0);
+			glRotated(90, 0, 1, 0);
+			glRotated(-trackDelta, 0, 0, 1);
+			tire.draw();
+			
+			caps.draw();
+
+			glTranslated(0, 0, wheelWidth);
+			caps.draw();
 
 		glPopMatrix();
 
-	glPopMatrix();
-		/*
-		Rectangle("bodyCar", 0, 0, bodyWidth, bodyHeight, getR(), getG(), getB()).draw();
-
 		glPushMatrix();
 			glTranslated(0, bodyHeight/2, 0);
-			glRotated(-cannonYaw, 0, 0, 1);
-			glTranslated(0, cannonHeight/2, 0);
-			Rectangle("cannon", 0, 0, cannonWidth, cannonHeight, getR()*0.1, getG()*0.1, getB()*0.1).draw();
-		glPopMatrix();*/
+				glRotated(-cannonYaw, 0, 0, 1);
+				glRotated(cannonPitch, 1, 0, 0);
+				glTranslated(0, cannonHeight/2, 0);
+				Cube cannon("cannon", 0, 0, 0, cannonWidth, cannonHeight, cannonDepth, getR()*0.1, getG()*0.1, getB()*0.1);
+				cannon.setTexture(bodyTex);
+				cannon.draw();
+		glPopMatrix();
+	glPopMatrix();
+	
+
 }
 
 
@@ -408,9 +491,9 @@ void Car::moveFoward(GLdouble timeDiff)
 	cX = x - sin(yaw*M_PI/180) * bodyHeight/2;
 	cY = y + cos(yaw*M_PI/180) * bodyHeight/2;
 
-	//trackDelta += 0.2;
-	//if(trackDelta >= wheelHeight * 0.50)
-	//	trackDelta = 0;
+	trackDelta += 2;
+	if(trackDelta >= 360)
+		trackDelta = 0;
 }
 
 void Car::moveBackward(GLdouble timeDiff)
@@ -428,9 +511,9 @@ void Car::moveBackward(GLdouble timeDiff)
 	cX = x - sin(yaw*M_PI/180) * bodyHeight/2;
 	cY = y + cos(yaw*M_PI/180) * bodyHeight/2;
 
-	//trackDelta -= 0.2;
-	//if(trackDelta < 0)
-	//	trackDelta = wheelHeight * 0.50;
+	trackDelta -= 2;
+	if(trackDelta <= 0)
+		trackDelta = 360;
 }
 
 
@@ -465,6 +548,7 @@ void Car::moveWheels(double dyaw, GLdouble timeDiff)
 void Car::moveCannon(int x, int y)
 {
 	int mouseMovedX = x - mouseLastX;
+	int mouseMovedY = y - mouseLastY;
 
 	cannonYaw += mouseMovedX*mouseSens;
 	if(cannonYaw > 45)
@@ -474,10 +558,19 @@ void Car::moveCannon(int x, int y)
 		cannonYaw = -45;
 
 	mouseLastX = x;
+
+	cannonPitch -= mouseMovedY * mouseSens;
+	if(cannonPitch > 45)
+		cannonPitch = 45;
+	
+	if(cannonPitch < 0)
+		cannonPitch = 0;
+	
+	mouseLastY = y;
 }
 
 Bullet* Car::shoot()
 {
-	return new Bullet("pewpew", cX, cY, cZ, cannonWidth, yaw - cannonYaw , bulletSpeed, this->getID());
+	return new Bullet("pewpew", cX, cY, cZ, cannonWidth, yaw - cannonYaw, cannonPitch, bulletSpeed, this->getID());
 }
 
