@@ -1,6 +1,6 @@
 CC=g++
 CFLAGS= -c -Wall -std=c++11
-LFLAGS= -lGL -lglut
+LFLAGS= -lGL -lGLU -lglut
 EXEC=trabalhocg
 SRCS=tinyxml2.cpp imageloader.cpp botia.cpp objects.cpp main.cpp
 OBJ=$(SRCS:.cpp=.o)

@@ -9,6 +9,7 @@
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include <GL/glut.h>
+
 #include "tinyxml2.h"
 #include "objects.h"
 #include "imageloader.h"
@@ -19,7 +20,7 @@ using namespace tinyxml2;
 typedef unsigned int uint;
 
 int g_windowWidth = 0, g_windowHeight = 0;
-pair<int,int> g_orthoX, g_orthoY;
+pair<int,int> g_orthoX, g_orthoY, g_orthoZ;
 GLfloat g_windowBG_R = 1.0, g_windowBG_G = 1.0, g_windowBG_B = 1.0;
 char g_windowTitle[] = "trabalhocg";
 
@@ -55,6 +56,13 @@ char g_loseMsg[10] = "PERDEU!";
 GLuint textureTrack;
 GLuint textureGrass;
 GLuint textureFinishLine;
+GLuint textureMetal;
+GLuint textureGlass;
+GLuint textureTire;
+
+double g_camTheta = 0, g_camPhi = 45, g_camSens = 0.1;
+int lastMouseX, lastMouseY;
+bool g_moveThirdPerson = false;
 
 int openFile(int argc, char **argv);
 
@@ -223,9 +231,7 @@ void displayCallback(void)
 	glClearColor(g_windowBG_R, g_windowBG_G, g_windowBG_B, 0.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	glOrtho(g_orthoX.first, g_orthoX.second, g_orthoY.first, g_orthoY.second, -1.0, 1.0);
+	//glOrtho(g_orthoX.first, g_orthoX.second, g_orthoY.first, g_orthoY.second, g_orthoZ.first, g_orthoZ.second);
 
 	if(dayTime)
 	{
@@ -233,25 +239,52 @@ void displayCallback(void)
 		glLightfv(GL_LIGHT0, GL_POSITION, sun_position);
 		glEnable(GL_LIGHT0);
 	}
+	
+	glViewport(0, 0, g_windowWidth, g_windowHeight);
+	
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
 
-	/*
+	gluPerspective(90, g_windowWidth/g_windowHeight, 0.1f, 500.0f);
+	
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	
+	double camX, camY, camZ;
 	switch(cameraState)
 	{
 		case 1:
-			gluLookAt(g_player->getX(), g_player->getY(), g_player->getZ())
+		{
+			camX = g_player->getX() - sin(g_player->getYaw() * M_PI/180) * g_player->getHitboxRadius();
+			camY = g_player->getY() + cos(g_player->getYaw() * M_PI/180) * g_player->getHitboxRadius();
+			camZ = g_player->getZ() + g_player->getHitboxRadius() * 0.5;
+			
+			gluLookAt(camX, camY, camZ,
+					g_player->getX() - sin(g_player->getYaw() * M_PI/180) * g_player->getHitboxRadius()*1.5,
+					g_player->getY() + cos(g_player->getYaw() * M_PI/180) * g_player->getHitboxRadius()*1.5,
+					camZ,
+					0, 0, 1);
 			break;
+		}
 		case 2:
 			break;
 		case 3:
-			break;
-	}*/
+		{
+			camX = g_player->getX() + sin((g_player->getYaw() + g_camTheta) * M_PI/180) * g_player->getHitboxRadius() * 1.5;
+			camY = g_player->getY() - cos((g_player->getYaw() + g_camTheta) * M_PI/180) * g_player->getHitboxRadius() * 1.5;
+			camZ = g_player->getZ() + sin(g_camPhi * M_PI/180) * g_player->getHitboxRadius() * 1.5;
 
+			gluLookAt(camX, camY, camZ, g_player->getX(), g_player->getY(), g_player->getZ(), 0, 0, 1);
+
+			break;
+		}
+	}
 
 	for(uint i = 0; i < g_arena.size(); ++i)
 		g_arena[i]->draw();
-	/*
+	
 	g_start->draw();
-
+	
 	for(uint i = 0; i < g_objects.size(); ++i)
 		g_objects[i]->draw();
 
@@ -263,6 +296,7 @@ void displayCallback(void)
 	for(uint i = 0; i < g_bullets.size(); ++i)
 		g_bullets[i]->draw();
 
+	/*
 	char buffer[256];
 	sprintf(buffer, "%d", (int)elapsedTime/1000);
 	renderBitmapString(g_orthoX.second - 25, g_orthoY.second - 15, GLUT_BITMAP_9_BY_15, buffer);
@@ -295,12 +329,49 @@ void mouseCallback(int button, int state, int x, int y)
 		if(aux != NULL)
 			g_bullets.push_back(aux);
 	}
+
+	if(button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN)
+	{
+		lastMouseX = x;
+		lastMouseY = y; 
+		g_moveThirdPerson = true;
+	}
+	
+	
+	if(button == GLUT_RIGHT_BUTTON && state == GLUT_UP)
+		g_moveThirdPerson = false;
+
 	glutPostRedisplay();
 }
 
 void mouseMoveCallback(int x, int y)
 {
 	g_player->moveCannon(x, y);
+	glutPostRedisplay();
+}
+
+void mouseCamCallback(int x, int y)
+{
+	if(g_moveThirdPerson)
+	{
+		int dx = x - lastMouseX,
+			dy = y - lastMouseY;
+
+		g_camTheta += dx * g_camSens;
+		if(g_camTheta >= 180)
+			g_camTheta = 180;
+		
+		if(g_camTheta <= -180)
+			g_camTheta = -180;
+
+		g_camPhi += dy * g_camSens;
+		if(g_camPhi >= 90)
+			g_camPhi = 90;
+
+		if(g_camPhi <= -90)
+			g_camPhi = -90;
+	}
+
 	glutPostRedisplay();
 }
 
@@ -353,12 +424,48 @@ int main(int argc, char **argv)
 	g_arena[1]->setTexture(textureGrass);
 
 	textureFinishLine = loadTextureRAW("checker.bmp");
+	if(textureFinishLine == 0)
+	{
+		cerr << "Could not bind texture \"checker.bmp\"; Exiting... " << endl;
+		return 1;
+	}
+	g_start->setTexture(textureFinishLine);
+
+	textureMetal = loadTextureRAW("metal.bmp");
+	if(textureMetal == 0)
+	{
+		cerr << "Could not bind texture \"metal.bmp\"; Exiting... " << endl;
+		return 1;
+	}
+	
+	textureGlass = loadTextureRAW("glass.bmp");
+	if(textureMetal == 0)
+	{
+		cerr << "Could not bind texture \"glass.bmp\"; Exiting... " << endl;
+		return 1;
+	}
+	
+	textureTire = loadTextureRAW("tire.bmp");
+	if(textureMetal == 0)
+	{
+		cerr << "Could not bind texture \"tire.bmp\"; Exiting... " << endl;
+		return 1;
+	}
+	g_player->setBodyTex(textureMetal);
+	g_player->setCockpitTex(textureGlass);
+	g_player->setTireTex(textureTire);
+
+	for(uint i = 0; i < g_cars.size(); ++i)
+		g_cars[i]->setBodyTex(textureMetal);
 
 
 	glutDisplayFunc(displayCallback);
 	glutReshapeFunc(reshapeCallback);
+
 	glutMouseFunc(mouseCallback);
 	glutPassiveMotionFunc(mouseMoveCallback);
+	glutMotionFunc(mouseCamCallback);
+
 	glutKeyboardFunc(keyDownCallback);
 	glutKeyboardUpFunc(keyUpCallback);
 
@@ -484,7 +591,7 @@ int openFile(int argc, char **argv)
 			}
 
 			if(strstr(id, "LargadaChegada") != NULL)
-				g_start = new Rectangle(id, x+width/2, y+height/2, 0, width, height, r, g, b);
+				g_start = new Rectangle(id, x+width/2, y+height/2, 0.2, width, height, r, g, b);
 			else
 				g_objects.push_back(new Rectangle(id, x+width/2, y+height/2, 0, width, height, r, g, b));
 		}
@@ -499,7 +606,7 @@ int openFile(int argc, char **argv)
 			color = objectElement->Attribute("fill");
 			id = objectElement->Attribute("id");
 
-			double r = 0, g = 0, b = 0;
+			double r = 0, g = 0, b = 0, z = 0.2;
 
 			if((strstr(id, "Pista") != NULL) && (g_windowWidth < radius*2))
 			{
@@ -507,11 +614,14 @@ int openFile(int argc, char **argv)
 
 				g_orthoX = make_pair(x-radius, x+radius);
 				g_orthoY = make_pair(y-radius, y+radius);
+				
+				z = 0;
 			}
 			
 			if(strstr(color, "green") != NULL)
 			{
-				g_player = new Car(id, x, y, 0.5, radius, 0, g_carSpeed, g_bulletSpeed, 0, 1, 0);
+				g_player = new Car(id, x, y, radius*0.4, radius, 0, g_carSpeed, g_bulletSpeed, 0, 1, 0);
+				g_orthoZ = make_pair(-1.0, 4 * radius * 0.5);
 			}else{
 
 				if(strstr(color, "red") != NULL)
@@ -522,7 +632,7 @@ int openFile(int argc, char **argv)
 
 					yaw = atan2(dx,dy) * 180.0/M_PI;
 					//cout << yaw << endl;
-					Car* enemy = new Car(id, x, y, 0.5, radius, 270 - yaw, g_enCarSpeed, g_enBulletSpeed, 1, 0, 0);
+					Car* enemy = new Car(id, x, y, radius*0.4, radius, 270 - yaw, g_enCarSpeed, g_enBulletSpeed, 1, 0, 0);
 					enemy->setIA(new IA(g_enShootFreq));
 					enemy->setWheelYaw(7);
 					
@@ -544,9 +654,9 @@ int openFile(int argc, char **argv)
 					}
 
 					if(strstr(id, "Pista") != NULL)
-						g_arena.push_back(new Circle(id, x, y, 0, radius, r, g, b));
+						g_arena.push_back(new Circle(id, x, y, z, radius, r, g, b));
 					else
-						g_objects.push_back(new Circle(id, x, y, 0, radius, r, g, b));
+						g_objects.push_back(new Circle(id, x, y, z, radius, r, g, b));
 				}				
 			}
 		}

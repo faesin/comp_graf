@@ -54,11 +54,13 @@ protected:
 	GLuint texture;
 };
 
+
+
 class Line: public Object
 {
 	double x, y, z, width;
 public:
-	Line(const char* id, int x, int y, int z, int w, double R, double G, double B, double S = 0):
+	Line(const char* id, double x, double y, double z, double w, double R, double G, double B, double S = 0):
 		Object(id, R, G, B, S), x(x), y(y), z(z), width(w) {};
 	~Line(){};
 
@@ -70,11 +72,13 @@ public:
 	double getWidth() const {return width;};
 };
 
+
+
 class Rectangle: public Object
 {
 	double x, y, z, width, height;
 public:
-	Rectangle(const char* id, int x, int y, int z, int w, int h, double R, double G, double B, double S = 100):
+	Rectangle(const char* id, double x, double y, double z, double w, double h, double R, double G, double B, double S = 100):
 		Object(id, R, G, B, S), x(x), y(y), z(z), width(w), height(h) {};
 	~Rectangle(){};
 
@@ -87,12 +91,14 @@ public:
 	double getHeight() const {return height;};
 };
 
+
+
 class Circle: public Object
 {
 	double x, y, z, radius;
 public:
 
-	Circle(const char *id, int x, int y, int z, int rad, double R, double G, double B, double S = 100):
+	Circle(const char *id, double x, double y, double z, double rad, double R, double G, double B, double S = 100):
 		Object(id, R, G, B, S), x(x), y(y), z(z), radius(rad) {};
 	~Circle(){};
 
@@ -105,13 +111,33 @@ public:
 
 };
 
+
+class Cilinder: public Object
+{
+	double x, y, z, radius, height;
+
+public:
+	Cilinder(const char* id, double x, double y, double z, double r, double h,
+		double R, double G, double B, double S = 128):
+		Object(id, R, G, B, S), x(x), y(y), z(z), radius(r), height(h) {};
+		
+	void draw();
+
+	double getX() const {return x;};
+	double getY() const {return y;};
+	double getZ() const {return z;};
+	double getHeight() const {return height;};
+	double getRadius() const {return radius;};
+};
+
+
 //Its a parallelepiped, but the name is too big
 class Cube: public Object
 {
-	double x, y, z, width, height, depth; //0:128
+	double x, y, z, width, height, depth; 
 
 public:
-	Cube(const char* id, int x, int y, int z, int w, int h, int d,
+	Cube(const char* id, double x, double y, double z, double w, double h, double d,
 		double R, double G, double B, double S = 128):
 		Object(id, R, G, B, S), x(x), y(y), z(z), width(w), height(h), depth(d) {};
 	~Cube(){};
@@ -125,6 +151,8 @@ public:
 	double getHeight() const {return height;};
 	double getDepth() const {return depth;};
 };
+
+
 
 class Bullet: public Object
 {
@@ -147,12 +175,14 @@ public:
 	void updatePosition(double timeDiff);
 };
 
+
+
 class Car: public Object
 {
 	double x, y, z, hitboxRad, yaw, carSpeed,
 			bodyHeight, bodyWidth, bodyDepth,
 			suspHeight, suspWidth, suspDepth,
-			wheelHeight, wheelWidth, wheelYaw,
+			wheelRadius, wheelWidth, wheelYaw,
 			wheelTrackHeight, wheelTrackWidth, trackDelta,
 			cannonHeight, cannonWidth, cannonDepth, cannonYaw, cX, cY, cZ,
 			bulletSpeed;
@@ -164,8 +194,13 @@ class Car: public Object
 	IA *intel;
 
 	Mesh* carMesh;
+
+	GLuint bodyTex;
+	GLuint cockpitTex;
+	GLuint tireTex;
+
 public:
-	Car(const char *id, int x, int y, int z, int rad, double yaw = 0, double cSpd = 1, double bSpd = 0.5,
+	Car(const char *id, double x, double y, double z, double rad, double yaw = 0, double cSpd = 1, double bSpd = 0.5,
 		 double r = 0, double g = 1, double b = 0);
 	~Car(){ delete intel; };
 
@@ -206,7 +241,11 @@ public:
 
 	vec3 getNextPosition(int direc, GLdouble);
 
-	void think(double timeDiff){ this->intel->doStep(timeDiff); };
+	void think(double timeDiff) {this->intel->doStep(timeDiff);};
+
+	void setBodyTex(GLuint tex) {bodyTex = tex;};
+	void setCockpitTex(GLuint tex) {cockpitTex = tex;};
+	void setTireTex(GLuint tex) {tireTex = tex;};
 		
 };
 

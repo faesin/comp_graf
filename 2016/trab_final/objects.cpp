@@ -45,34 +45,38 @@ void Line::draw()
 
 void Rectangle::draw()
 {
-	glColor3d(this->getR(), this->getG(), this->getB());
-
 	glPushMatrix();
-		glTranslated(x, y, 0);
+		glEnable(GL_TEXTURE_2D);
+		
+		GLfloat mat_emission[] = {0.5, 0.5, 0.5, 1.0};
+		GLfloat mat_color[] = {(float)this->getR(), (float)this->getG(), (float)this->getB(), 1.0};
+		GLfloat mat_specular[] = {1.0, 1.0, 1.0, 1.0};
+		GLfloat mat_shininess[] = {(float)this->getShininess()};
 
+		
+		glMaterialfv(GL_FRONT, GL_EMISSION, mat_emission);
+		glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mat_color);
+		glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+		glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
+		
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);//X
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);//Y
+
+		glBindTexture(GL_TEXTURE_2D, this->getTexture());
+
+		glTranslated(x, y, z);
+
+		double textureS = 1;
 		glBegin(GL_POLYGON);
-			glVertex3d(-width/2.0, height/2.0, 0.0);
-			glVertex3d(width/2.0, height/2.0, 0.0);
-			glVertex3d(width/2.0, -height/2.0, 0.0);
-			glVertex3d(-width/2.0, -height/2.0, 0.0);
+			glTexCoord2f(0, 0);
+			glVertex3d(-width/2.0, height/2.0, z);
+			glTexCoord2f(0, textureS);
+			glVertex3d(width/2.0, height/2.0, z);
+			glTexCoord2f(textureS, textureS);
+			glVertex3d(width/2.0, -height/2.0, z);
+			glTexCoord2f(textureS, 0);
+			glVertex3d(-width/2.0, -height/2.0, z);
 		glEnd();
-
-		// glColor3d(this->strR, this->strG, this->strB);
-		// glLineWidth(this->strokeW);
-		// glBegin(GL_LINE_LOOP);
-		// 	glVertex3d(-width/2, height/2, 0.0);
-		// 	glVertex3d(width/2, height/2, 0.0);
-		// 	glVertex3d(width/2, -height/2, 0.0);
-		// 	glVertex3d(-width/2, -height/2, 0.0);
-		// glEnd();
-
-		// glPointSize(this->strokeW);
-		// glBegin(GL_POINTS);
-		// 	glVertex3d(-width/2, height/2, 0.0);
-		// 	glVertex3d(width/2, height/2, 0.0);
-		// 	glVertex3d(width/2, -height/2, 0.0);
-		// 	glVertex3d(-width/2, -height/2, 0.0);
-		// glEnd();
 	glPopMatrix();
 }
 
@@ -102,8 +106,6 @@ void Circle::draw()
 
 		glBindTexture(GL_TEXTURE_2D, this->getTexture());
 
-		//glColor3d(this->getR(), this->getG(), this->getB());
-
 		glTranslated(x, y, z);
 
 		static const double circle_points = 100;
@@ -129,20 +131,63 @@ void Circle::draw()
 void Cube::draw()
 {
 	glPushMatrix();
-		GLfloat mat_emission[] = {0.0, 0.0, 0.0, 1.0};
-		GLfloat mat_color[] = {(float)this->getR(), (float)this->getG(), (float)this->getB(), 1.0};
-		GLfloat mat_specular[] = {1.0, 1.0, 1.0, 1.0};
-		GLfloat mat_shininess[] = {(float)this->getShininess()};
-
-		glMaterialfv(GL_FRONT, GL_EMISSION, mat_emission);
-		glMaterialfv(GL_FRONT, GL_AMBIENT, mat_color);
-		glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_color);
-		glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
-		glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
-
-		glScaled(width, height, depth);
 		glTranslated(x, y, z);
-		glutSolidCube(1);
+		
+		glPushMatrix();
+			glTranslated(0, 0, depth/2);
+
+			Rectangle rect1("body", 0, 0, 0, width, height, getR(), getG(), getB(), getShininess());
+			rect1.setTexture(getTexture());
+			rect1.draw();
+
+		glPopMatrix();
+		
+		glPushMatrix();
+			glTranslated(0, 0, -depth/2);
+			rect1.draw();
+
+		glPopMatrix();
+		
+		glPushMatrix();
+			glRotated(90, 0, 1, 0);
+			
+			glPushMatrix();
+				glTranslated(0, 0, width/2);
+
+				Rectangle rect2("body", 0, 0, 0, depth, height, getR(), getG(), getB(), getShininess());
+				rect2.setTexture(getTexture());
+				rect2.draw();
+
+			glPopMatrix();
+		
+			glPushMatrix();
+				glTranslated(0, 0, -width/2);
+
+				rect2.draw();
+
+			glPopMatrix();
+		glPopMatrix();
+
+		glPushMatrix();
+			glRotated(90, 1, 0, 0);
+			
+			glPushMatrix();
+				glTranslated(0, 0, height/2);
+
+				Rectangle rect3("body", 0, 0, 0, width, depth, getR(), getG(), getB(), getShininess());
+				rect3.setTexture(getTexture());
+				rect3.draw();
+
+			glPopMatrix();
+		
+			glPushMatrix();
+				glTranslated(0, 0, -height/2);
+				rect3.draw();
+
+			glPopMatrix();
+		glPopMatrix();
+
+		//glutSolidCube(size);
 	glPopMatrix();
 }
 
@@ -170,33 +215,41 @@ void Bullet::updatePosition(GLdouble timeDiff)
 /* =========================================================== */
 
 
-Car::Car(const char *id, int x, int y, int z, int rad, double yaw, double cSpd, double bSpd, double r, double g, double b) :
+Car::Car(const char *id, double x, double y, double z, double rad, double yaw, double cSpd, double bSpd, double r, double g, double b) :
 	Object(id, r, g, b), x(x), y(y), z(z), hitboxRad(rad), yaw(yaw), carSpeed(cSpd), bulletSpeed(bSpd)
 {
 	wheelYaw = 0;
 
 	bodyHeight = rad * 2;
-	bodyWidth = rad * 0.25 * 2;
+	bodyWidth = rad * 0.5;
+	bodyDepth = rad * 0.5;
+
 	suspHeight = rad * 0.1;
 	suspWidth = rad * 0.25;
-	wheelHeight = rad * 0.40;
+	suspDepth = rad * 0.1;
+
+	wheelRadius = rad * 0.40;
 	wheelWidth = rad * 0.30;
 
-	wheelTrackHeight = wheelHeight * 0.4;
+	//wheelTrackHeight = wheelHeight * 0.4;
 	// wheelTrackWidth = wheelWidth * 0.7;
 
 	cannonHeight = rad * 0.3;
 	cannonWidth = rad * 0.1;
+	cannonDepth = rad * 0.1;
 
 	mouseSens = 0.5;
 
 	cX = x - sin(yaw*M_PI/180) * bodyHeight/2;
 	cY = y + cos(yaw*M_PI/180) * bodyHeight/2;
 	//TODO::
-	//cZ = 0
+	cZ = z;
 
 	trackDelta = 0;
 	intel = NULL;
+
+	cout << id << endl;
+	cout << bodyHeight << " " << bodyWidth << " " << bodyDepth << endl;
 }
 
 void setMeshes(char path)
@@ -207,88 +260,127 @@ void setMeshes(char path)
 
 void Car::draw()
 {
+	//cout << "z :" << z << endl;
 	glPushMatrix();
-		glTranslated(x, y, 0);
+		glTranslated(x, y, z);
 		glRotated(yaw, 0, 0, 1);
-		//Circle("hitboxCar", 0, 0, hitboxRad, 0.5, 0.5, 0.5).draw();
-		Cube("bodyCar", 0, 0, 1, bodyWidth, bodyHeight, bodyDepth, getR(), getG(), getB(), 128).draw();
+	
+		glPushMatrix();
+			glTranslated(0, 0, bodyDepth);
+
+			Rectangle rect1("bodyCeling", 0, 0, 0, bodyWidth, bodyHeight, getR(), getG(), getB(), getShininess());
+			rect1.setTexture(bodyTex);
+			rect1.draw();
+
+		glPopMatrix();
 		
+		glPushMatrix();
+			Rectangle rect2("bodyFloor", 0, 0, 0, bodyWidth, bodyHeight, getR(), getG(), getB(), getShininess());
+			rect2.setTexture(bodyTex);
+			rect2.draw();
+
+		glPopMatrix();
+
+		glPushMatrix();
+			glRotated(90, 0, 1, 0);
+			
+			glPushMatrix();
+				glTranslated(-bodyWidth/2, 0, bodyWidth/2);
+
+				Rectangle rect3("bodyWall1", 0, 0, 0, bodyWidth, bodyHeight, getR(), getG(), getB(), getShininess());
+				rect3.setTexture(bodyTex);
+				rect3.draw();
+
+			glPopMatrix();
+		
+			glPushMatrix();
+				glTranslated(-bodyWidth/2, 0, -bodyWidth/2);
+
+				Rectangle rect4("bodyWall2", 0, 0, 0, bodyWidth, bodyHeight, getR(), getG(), getB(), getShininess());
+				rect4.setTexture(bodyTex);
+				rect4.draw();
+
+			glPopMatrix();
+		glPopMatrix();
+
+		glPushMatrix();
+			glRotated(90, 1, 0, 0);
+			
+			glPushMatrix();
+				glTranslated(0, bodyWidth/2, bodyHeight/2);
+
+				Rectangle rect5("body", 0, 0, 0, bodyWidth, bodyWidth, getR(), getG(), getB(), getShininess());
+				rect5.setTexture(bodyTex);
+				rect5.draw();
+
+			glPopMatrix();
+		
+			glPushMatrix();
+				glTranslated(0, bodyWidth/4, -bodyHeight/2);
+
+				Rectangle rect6("body", 0, 0, 0, bodyWidth, bodyWidth/2, getR(), getG(), getB(), getShininess());
+				rect6.setTexture(bodyTex);
+				rect6.draw();
+
+				glTranslated(0, bodyWidth/2, 0);
+				Rectangle rect7("windshield", 0, 0, 0, bodyWidth, bodyWidth/2, 0, 0, getB(), 128);
+				rect7.setTexture(cockpitTex);
+				rect7.draw();
+
+			glPopMatrix();
+		glPopMatrix();
+
+		//Cube body("bodyCar", 0, 0, bodyDepth/2, bodyHeight, bodyWidth, bodyDepth, getR(), getG(), getB(), 100);
+		//body.setTexture(bodyTex);
+		//body.draw();
+
+		//GLUquadricObj *quadratic;
+		//quadratic = gluNewQuadric();
+		//glRotatef(90.0f, 0.0f, 1.0f, 0.0f);
+
+		glPushMatrix();
+			glTranslated(bodyWidth/2 + suspWidth/2, bodyHeight/2 - wheelRadius/2, 0);
+			Cube susp1("suspFrontRight", 0, 0, 0, suspWidth, suspHeight, suspDepth, getR()*0.5, getG()*0.5, getB()*0.5);
+			susp1.setTexture(bodyTex);
+			susp1.draw();
+
+			glTranslated(suspWidth/2 + wheelWidth/2, 0, 0);
+			glRotated(90, 0, 1, 0);
+			glRotated(wheelYaw, 0, 0, 1);
+			gluCylinder(quadratic, wheelRadius, wheelRadius, wheelWidth, 32, 32);
+			//Rectangle("wheelFrontRight", 0, 0, wheelWidth, wheelHeight, getR()*0.3, getG()*0.3, getB()*0.3).draw();
+		glPopMatrix();
+
+		glPushMatrix();
+			glTranslated(-bodyWidth/2 - suspWidth/2, bodyHeight/2 - wheelRadius/2, 0);
+			susp1.draw();
+	
+			glTranslated(-suspWidth/2 - wheelWidth/2, 0, 0);
+			glRotated(wheelYaw, 0, 0, 1);
+			//Rectangle("wheelFrontLeft", 0, 0, wheelWidth, wheelHeight, getR()*0.3, getG()*0.3, getB()*0.3).draw();
+		glPopMatrix();
+
+		glPushMatrix();
+			glTranslated(bodyWidth/2 + suspWidth/2, - bodyHeight/2 + wheelRadius/2, 0);
+			susp1.draw();
+	
+			//glTranslated(suspWidth/2 + wheelWidth/2, 0, 0);
+			//Rectangle("wheelBackRight", 0, 0, wheelWidth, wheelHeight, getR()*0.3, getG()*0.3, getB()*0.3).draw();
+
+		glPopMatrix();
+
+		glPushMatrix();
+			glTranslated(-bodyWidth/2 - suspWidth/2, -bodyHeight/2 + wheelRadius/2, 0);
+			susp1.draw();
+	
+			//glTranslated(-suspWidth/2 - wheelWidth/2, 0, 0);
+			//Rectangle("wheelBackLeft", 0, 0, wheelWidth, wheelHeight, getR()*0.3, getG()*0.3, getB()*0.3).draw();
+
+		glPopMatrix();
+
+	glPopMatrix();
 		/*
 		Rectangle("bodyCar", 0, 0, bodyWidth, bodyHeight, getR(), getG(), getB()).draw();
-
-		glPushMatrix();
-			glTranslated(bodyWidth/2 + suspWidth/2, bodyHeight/2 - wheelHeight/2, 0);
-			Rectangle("suspFrontRight", 0, 0, suspWidth, suspHeight, getR()*0.5, getG()*0.5, getB()*0.5).draw();
-	
-			glTranslated(suspWidth/2 + wheelWidth/2, 0, 0);
-			glRotated(wheelYaw, 0, 0, 1);
-			Rectangle("wheelFrontRight", 0, 0, wheelWidth, wheelHeight, getR()*0.3, getG()*0.3, getB()*0.3).draw();
-
-			glPushMatrix();
-				glTranslated(0, trackDelta, 0);
-				Line("wheelTrackMiddle", 0, 0, wheelWidth, 0, 0, 0).draw();
-			glPopMatrix();
-
-			glPushMatrix();
-				glTranslated(0, -wheelHeight/2 + trackDelta, 0);
-				Line("wheelTrackLast", 0, 0, wheelWidth, 0, 0, 0).draw();
-			glPopMatrix();
-		glPopMatrix();
-
-		glPushMatrix();
-			glTranslated(-bodyWidth/2 - suspWidth/2, bodyHeight/2 - wheelHeight/2, 0);
-			Rectangle("suspFrontLeft", 0, 0, suspWidth, suspHeight, getR()*0.5, getG()*0.5, getB()*0.5).draw();
-	
-			glTranslated(-suspWidth/2 - wheelWidth/2, 0, 0);
-			glRotated(wheelYaw, 0, 0, 1);
-			Rectangle("wheelFrontLeft", 0, 0, wheelWidth, wheelHeight, getR()*0.3, getG()*0.3, getB()*0.3).draw();
-
-			glPushMatrix();
-				glTranslated(0, trackDelta, 0);
-				Line("wheelTrackMiddle", 0, 0, wheelWidth, 0, 0, 0).draw();
-			glPopMatrix();
-
-			glPushMatrix();
-				glTranslated(0, -wheelHeight/2 + trackDelta, 0);
-				Line("wheelTrackLast", 0, 0, wheelWidth, 0, 0, 0).draw();
-			glPopMatrix();
-		glPopMatrix();
-
-		glPushMatrix();
-			glTranslated(bodyWidth/2 + suspWidth/2, - bodyHeight/2 + wheelHeight/2, 0);
-			Rectangle("suspBackRight", 0, 0, suspWidth, suspHeight, getR()*0.5, getG()*0.5, getB()*0.5).draw();
-	
-			glTranslated(suspWidth/2 + wheelWidth/2, 0, 0);
-			Rectangle("wheelBackRight", 0, 0, wheelWidth, wheelHeight, getR()*0.3, getG()*0.3, getB()*0.3).draw();
-
-			glPushMatrix();
-				glTranslated(0, trackDelta, 0);
-				Line("wheelTrackMiddle", 0, 0, wheelWidth, 0, 0, 0).draw();
-			glPopMatrix();
-
-			glPushMatrix();
-				glTranslated(0, -wheelHeight/2 + trackDelta, 0);
-				Line("wheelTrackLast", 0, 0, wheelWidth, 0, 0, 0).draw();
-			glPopMatrix();
-		glPopMatrix();
-
-		glPushMatrix();
-			glTranslated(-bodyWidth/2 - suspWidth/2, -bodyHeight/2 + wheelHeight/2, 0);
-			Rectangle("suspBackLeft", 0, 0, suspWidth, suspHeight, getR()*0.5, getG()*0.5, getB()*0.5).draw();
-	
-			glTranslated(-suspWidth/2 - wheelWidth/2, 0, 0);
-			Rectangle("wheelBackLeft", 0, 0, wheelWidth, wheelHeight, getR()*0.3, getG()*0.3, getB()*0.3).draw();
-
-			glPushMatrix();
-				glTranslated(0, trackDelta, 0);
-				Line("wheelTrackMiddle", 0, 0, wheelWidth, 0, 0, 0).draw();
-			glPopMatrix();
-
-			glPushMatrix();
-				glTranslated(0, -wheelHeight/2 + trackDelta, 0);
-				Line("wheelTrackLast", 0, 0, wheelWidth, 0, 0, 0).draw();
-			glPopMatrix();
-		glPopMatrix();
 
 		glPushMatrix();
 			glTranslated(0, bodyHeight/2, 0);
@@ -296,7 +388,6 @@ void Car::draw()
 			glTranslated(0, cannonHeight/2, 0);
 			Rectangle("cannon", 0, 0, cannonWidth, cannonHeight, getR()*0.1, getG()*0.1, getB()*0.1).draw();
 		glPopMatrix();*/
-	glPopMatrix();
 }
 
 
@@ -317,9 +408,9 @@ void Car::moveFoward(GLdouble timeDiff)
 	cX = x - sin(yaw*M_PI/180) * bodyHeight/2;
 	cY = y + cos(yaw*M_PI/180) * bodyHeight/2;
 
-	trackDelta += 0.2;
-	if(trackDelta >= wheelHeight * 0.50)
-		trackDelta = 0;
+	//trackDelta += 0.2;
+	//if(trackDelta >= wheelHeight * 0.50)
+	//	trackDelta = 0;
 }
 
 void Car::moveBackward(GLdouble timeDiff)
@@ -337,9 +428,9 @@ void Car::moveBackward(GLdouble timeDiff)
 	cX = x - sin(yaw*M_PI/180) * bodyHeight/2;
 	cY = y + cos(yaw*M_PI/180) * bodyHeight/2;
 
-	trackDelta -= 0.2;
-	if(trackDelta < 0)
-		trackDelta = wheelHeight * 0.50;
+	//trackDelta -= 0.2;
+	//if(trackDelta < 0)
+	//	trackDelta = wheelHeight * 0.50;
 }
 
 
